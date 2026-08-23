@@ -47,7 +47,11 @@ class BalanceRepository(private val context: Context) {
         return runCatching {
             when (credential.provider) {
                 Provider.DEEPSEEK -> fetchDeepSeek(credential)
-                Provider.OPENAI -> fetchOpenAi(credential)
+                Provider.OPENAI -> if (credential.apiKey.startsWith(OPENAI_ADMIN_KEY_PREFIX)) {
+                    fetchOpenAi(credential)
+                } else {
+                    verifyBearerKey(credential, "https://api.openai.com/v1/models")
+                }
                 Provider.OPENROUTER -> fetchOpenRouter(credential)
                 Provider.SILICONFLOW -> fetchSiliconFlow(credential)
                 Provider.MOONSHOT -> verifyBearerKey(
@@ -359,6 +363,7 @@ class BalanceRepository(private val context: Context) {
 
     companion object {
         private const val NEAR_LINE_MULTIPLIER = 1.5
+        private const val OPENAI_ADMIN_KEY_PREFIX = "sk-admin-"
         const val ACTION_BALANCE_UPDATED = "com.noyorin.balanceisland.BALANCE_UPDATED"
     }
 }

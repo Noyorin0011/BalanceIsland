@@ -9,9 +9,11 @@ import com.noyorin.balanceisland.data.BalanceRepository
 import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.AccountBalanceSettings
 import com.noyorin.balanceisland.data.AccountSettingsStore
+import com.noyorin.balanceisland.data.ApiKeySanitizer
 import com.noyorin.balanceisland.data.CredentialSummary
 import com.noyorin.balanceisland.data.Provider
 import com.noyorin.balanceisland.data.SecureKeyStore
+import com.noyorin.balanceisland.data.SnapshotStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +24,9 @@ data class MainUiState(
     val snapshots: List<BalanceSnapshot> = emptyList(),
     val accountSettings: Map<String, AccountBalanceSettings> = emptyMap(),
     val refreshing: Boolean = false,
-    val message: String? = null
+    val message: String? = null,
+    val keyCheckError: String? = null,
+    val credentialSaveEvent: Int = 0
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -39,25 +43,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     fun addCredential(provider: Provider, label: String, apiKey: String) {
-        if (apiKey.isBlank()) {
+        val cleanedKey = ApiKeySanitizer.clean(apiKey)
+        if (cleanedKey.isBlank()) {
             _uiState.value = _uiState.value.copy(message = text(R.string.message_key_empty))
             return
         }
-        val saveResult = runCatching { keys.addCredential(provider, label, apiKey) }
+        val saveResult = runCatching { keys.addCredential(provider, label, cleanedKey) }
         if (saveResult.isFailure) {
             _uiState.value = _uiState.value.copy(
                 message = saveResult.exceptionOrNull()?.message ?: text(R.string.message_save_failed)
             )
             return
         }
+        val savedCredential = saveResult.getOrThrow()
         _uiState.value = _uiState.value.copy(
             credentials = keys.summaries(),
             snapshots = repository.cached(),
             accountSettings = settingsFor(keys.summaries()),
             refreshing = true,
-            message = null
+            message = null,
+            keyCheckError = null
         )
-        refresh(messageOnSuccess = text(R.string.message_account_saved))
+        viewModelScope.launch {
+            val result = repository.refreshAll()
+            val tested = result.firstOrNull { it.credentialId == savedCredential.id }
+            if (tested?.status == SnapshotStatus.ERROR) {
+                _uiState.value = _uiState.value.copy(
+                    credentials = keys.summaries(),
+                    snapshots = result,
+                    accountSettings = settingsFor(keys.summaries()),
+                    refreshing = false,
+                    message = null,
+                    keyCheckError = text(R.string.api_key_test_failed, tested.secondaryText)
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    credentials = keys.summaries(),
+                    snapshots = result,
+                    accountSettings = settingsFor(keys.summaries()),
+                    refreshing = false,
+                    message = text(R.string.message_account_saved),
+                    keyCheckError = null,
+                    credentialSaveEvent = _uiState.value.credentialSaveEvent + 1
+                )
+            }
+        }
     }
 
     fun removeCredential(id: String) {
@@ -112,9 +142,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(message = null)
     }
 
+    fun clearKeyCheckError() {
+        _uiState.value = _uiState.value.copy(keyCheckError = null)
+    }
+
     private fun settingsFor(credentials: List<CredentialSummary>): Map<String, AccountBalanceSettings> =
         credentials.associate { it.id to accountSettingsStore.get(it.id) }
 
-    private fun text(id: Int): String =
-        AppLanguagePreferences.wrap(getApplication()).getString(id)
+    private fun text(id: Int, vararg args: Any): String =
+        AppLanguagePreferences.wrap(getApplication()).getString(id, *args)
 }

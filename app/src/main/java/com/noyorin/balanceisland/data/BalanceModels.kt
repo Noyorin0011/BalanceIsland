@@ -17,7 +17,7 @@ enum class Provider(
         "DeepSeek", "CNY", "DeepSeek API Key", "sk-...", BalanceCapability.DIRECT_BALANCE
     ),
     OPENAI(
-        "OpenAI", "USD", "OpenAI Admin API Key", "sk-admin-...", BalanceCapability.USAGE_OR_LIMIT
+        "OpenAI", "USD", "OpenAI API Key", "sk-proj-... / sk-admin-...", BalanceCapability.USAGE_OR_LIMIT
     ),
     OPENROUTER(
         "OpenRouter", "USD", "OpenRouter Management Key", "sk-or-...", BalanceCapability.DIRECT_BALANCE

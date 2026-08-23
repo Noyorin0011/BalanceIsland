@@ -22,8 +22,9 @@
 - 每账户独立下降步进通知，默认每下降 `5` 个货币单位提醒一次。
 - 每账户可填写手动显示余额；留空继续使用 API 值。
 - DeepSeek：调用 `GET https://api.deepseek.com/user/balance`。
-- OpenAI：调用 `GET /v1/organization/costs`；如果可用，再读取 `GET /v1/organization/spend_limit`。
+- OpenAI：`sk-admin-` 调用 `GET /v1/organization/costs`，并在可用时读取 `GET /v1/organization/spend_limit`；`sk-proj-` 与普通 Key 仅通过 `GET /v1/models` 校验，余额使用手动设置。
 - Android Keystore + AES-GCM 分账户加密保存 API Key，设置页只显示备注/后四位。
+- 粘贴 Key 时会自动提取 `sk-`、`AIza` 或 `xai-` 凭据，去除前置 `Bearer`、说明文字、引号和空白；验证仍失败时弹窗显示接口错误并提示检查 Key。
 - 自动迁移上一版保存的单个 DeepSeek/OpenAI Key。
 - 文字条前台服务负责分钟级刷新；服务未运行时由 WorkManager 以系统允许的 15 分钟周期兜底。
 - 控制中心“余额监控”磁贴可一键启动/停止文字条；Android 13+ 可在应用内请求添加。
@@ -47,9 +48,9 @@ DeepSeek、OpenRouter 和 SiliconFlow 显示官方接口返回/计算的账户�
 月度预算剩余 = 组织硬消费上限 - 本月 Costs
 ```
 
-若组织没有可读取的硬消费上限，只显示本月累计消费。OpenAI 查询需要组织 Owner 创建的 Admin API Key，普通项目 Key 通常没有组织成本权限。
+若组织没有可读取的硬消费上限，只显示本月累计消费。OpenAI 组织消费查询需要 Organization Owner 创建的 Admin API Key。配置页会常驻提示这一权限差异；检测到 `sk-proj-` 时只校验模型访问，不再错误调用组织账单接口，并提示填写手动余额。
 
-Kimi/Moonshot、Anthropic、Google Gemini、xAI/Grok 的普通 Key 当前只做官方模型接口验证；这些平台没有向普通 Key 提供统一剩余余额时，需在“额度警告与手动余额”填写余额。应用不会把 token 用量伪装成余额。
+OpenAI Project Key、Kimi/Moonshot、Anthropic、Google Gemini、xAI/Grok 的普通 Key 当前只做官方模型接口验证；这些平台没有向普通 Key 提供统一剩余余额时，需在“额度警告与手动余额”填写余额。应用不会把 token 用量伪装成余额。
 
 ## 构建
 

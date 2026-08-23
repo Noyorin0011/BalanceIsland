@@ -29,6 +29,10 @@
     <string name="hide_key">隐藏 Key</string>
     <string name="show_key">显示 Key</string>
     <string name="add_and_test">添加并测试</string>
+    <string name="api_key_cleanup_help">保存前会自动去掉 Key 前的 Bearer、说明文字、引号和多余空白，不会修改 Key 本体。</string>
+    <string name="api_key_test_failed_title">API Key 验证失败</string>
+    <string name="api_key_test_failed">自动清洗后仍无法通过接口验证。请检查提供的 API Key 是否正确、未过期并具备所需权限。\n\n接口返回：%1$s</string>
+    <string name="dialog_ok">知道了</string>
     <string name="key_security_help">Key 使用 Android Keystore + AES-GCM 加密；界面只显示备注或后四位。</string>
     <string name="add_account_first">添加 API 账户后可逐个设置。</string>
     <string name="alert_rule_help">余额 ≤ 警告线×1.5 时变橙；≤ 警告线时变红并推送。下降提醒默认每 5 个货币单位触发一次。</string>
@@ -76,7 +80,10 @@
     <string name="color_coral">珊瑚</string>
     <string name="color_lime">青柠</string>
     <string name="provider_help_deepseek">直接读取账户余额。</string>
-    <string name="provider_help_openai">Costs 需要组织 Owner 创建的 Admin Key。</string>
+    <string name="provider_help_openai">Admin Key 自动查询组织消费与上限；Project Key 仅校验可用性。</string>
+    <string name="openai_key_notice_title">OpenAI Key 权限提示</string>
+    <string name="openai_key_notice">常见的 sk-proj- 是 Project Key，可调用模型，但不能读取组织级消费与上限。自动查询需要组织 Owner 创建的 sk-admin- Admin Key；使用 Project Key 时请在“额度警告与手动余额”中填写余额。</string>
+    <string name="openai_project_key_detected">已检测到 Project Key：应用将校验 Key，但不会自动查询余额。</string>
     <string name="provider_help_openrouter">余额接口需要 Management Key，普通推理 Key 可能返回 403。</string>
     <string name="provider_help_siliconflow">通过官方 /user/info 接口读取总余额。</string>
     <string name="provider_help_moonshot">普通 Key 仅验证可用性；余额请在账户设置中手动填写。</string>
