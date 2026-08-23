@@ -9,6 +9,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.noyorin.balanceisland.worker.BalanceRefreshWorker
 import com.noyorin.balanceisland.localization.AppLanguagePreferences
+import com.noyorin.balanceisland.service.ServiceRuntimePreferences
 import java.util.concurrent.TimeUnit
 
 class BalanceIslandApplication : Application() {
@@ -18,6 +19,9 @@ class BalanceIslandApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // A process killed by Android cannot run Service.onDestroy(), so discard any
+        // service flag left by the previous process before components start again.
+        ServiceRuntimePreferences(this).setServiceRunning(false)
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()

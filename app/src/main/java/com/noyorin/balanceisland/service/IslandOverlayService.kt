@@ -150,7 +150,7 @@ class IslandOverlayService : Service() {
         when (intent?.action) {
             ACTION_STOP -> {
                 explicitStop = true
-                runtimePreferences.setDesiredRunning(false)
+                runtimePreferences.clearRunningState()
                 cancelScheduledRestart(this)
                 stopSelf()
             }
@@ -448,7 +448,7 @@ class IslandOverlayService : Service() {
         }
 
         fun stop(context: Context) {
-            ServiceRuntimePreferences(context).setDesiredRunning(false)
+            ServiceRuntimePreferences(context).clearRunningState()
             cancelScheduledRestart(context)
             context.stopService(Intent(context, IslandOverlayService::class.java))
         }

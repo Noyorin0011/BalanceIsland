@@ -15,6 +15,11 @@ import com.noyorin.balanceisland.service.ServiceRuntimePreferences
 class BalanceQuickSettingsTileService : TileService() {
     private val runtime by lazy { ServiceRuntimePreferences(this) }
 
+    override fun onTileAdded() {
+        super.onTileAdded()
+        updateTile()
+    }
+
     override fun onStartListening() {
         super.onStartListening()
         updateTile()
@@ -22,9 +27,9 @@ class BalanceQuickSettingsTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        if (runtime.desiredRunning() || runtime.serviceRunning()) {
+        if (runtime.serviceRunning()) {
             IslandOverlayService.stop(this)
-            updateTile()
+            updateTile(active = false)
             return
         }
         if (!Settings.canDrawOverlays(this)) {
@@ -46,13 +51,12 @@ class BalanceQuickSettingsTileService : TileService() {
             return
         }
         IslandOverlayService.start(this)
-        updateTile()
+        updateTile(active = true)
     }
 
-    private fun updateTile() {
+    private fun updateTile(active: Boolean = runtime.serviceRunning()) {
         val strings = AppLanguagePreferences.wrap(this)
         qsTile?.apply {
-            val active = runtime.desiredRunning() || runtime.serviceRunning()
             state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             label = strings.getString(R.string.quick_settings_tile_label)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

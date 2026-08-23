@@ -31,6 +31,15 @@ class ServiceRuntimePreferences(context: Context) {
         notifyTile()
     }
 
+    /** Clears both persisted flags when the user explicitly stops the overlay. */
+    fun clearRunningState() {
+        prefs.edit()
+            .putBoolean(KEY_DESIRED_RUNNING, false)
+            .putBoolean(KEY_SERVICE_RUNNING, false)
+            .apply()
+        notifyTile()
+    }
+
     private fun notifyTile() {
         TileService.requestListeningState(
             appContext,
