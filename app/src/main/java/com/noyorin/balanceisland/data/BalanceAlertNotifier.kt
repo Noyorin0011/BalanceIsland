@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.noyorin.balanceisland.R
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import com.noyorin.balanceisland.ui.MainActivity
 import java.util.Locale
 import kotlin.math.abs
@@ -19,6 +20,7 @@ import kotlin.math.abs
 /** Emits threshold-crossing and fixed-drop balance notifications without exposing API keys. */
 class BalanceAlertNotifier(private val context: Context) {
     private val settingsStore = AccountSettingsStore(context)
+    private val strings get() = AppLanguagePreferences.wrap(context)
 
     fun evaluate(snapshot: BalanceSnapshot) {
         val amount = snapshot.balanceAmount ?: return
@@ -35,15 +37,15 @@ class BalanceAlertNotifier(private val context: Context) {
         val reasons = mutableListOf<String>()
         if (level > (previous?.lastLevel ?: LEVEL_NORMAL)) {
             reasons += if (level == LEVEL_CRITICAL) {
-                "余额已低于警告线 ${money(settings.warningLine)}"
+                text(R.string.alert_below_line, money(settings.warningLine))
             } else {
-                "余额接近警告线（警告线 +50%）"
+                text(R.string.alert_near_line)
             }
         }
 
         val reference = previous?.lastNotifiedAmount
         if (reference != null && amount <= reference - settings.dropStep) {
-            reasons += "较上次提醒下降 ${money(reference - amount)}"
+            reasons += text(R.string.alert_dropped, money(reference - amount))
         }
 
         val shouldResetReference = reference == null || amount > reference
@@ -55,7 +57,9 @@ class BalanceAlertNotifier(private val context: Context) {
                 lastLevel = level
             )
         )
-        if (shouldNotify) notify(snapshot, reasons.joinToString("；"), settings.dropStep)
+        if (shouldNotify) {
+            notify(snapshot, reasons.joinToString(text(R.string.list_separator)), settings.dropStep)
+        }
     }
 
     private fun notify(snapshot: BalanceSnapshot, reason: String, dropStep: Double) {
@@ -67,8 +71,12 @@ class BalanceAlertNotifier(private val context: Context) {
         if (!notifications.areNotificationsEnabled()) return
         createChannel()
 
-        val title = "${snapshot.provider.displayName} · ${snapshot.accountDisplayLabel} 额度警告"
-        val content = "${snapshot.primaryText} · $reason"
+        val title = text(
+            R.string.alert_title,
+            snapshot.provider.displayName,
+            snapshot.accountDisplayLabel
+        )
+        val content = text(R.string.alert_content, snapshot.primaryText, reason)
         val pendingIntent = PendingIntent.getActivity(
             context,
             snapshot.credentialId.hashCode(),
@@ -96,15 +104,16 @@ class BalanceAlertNotifier(private val context: Context) {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "API 额度警告",
+                text(R.string.alert_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "余额接近警告线、越过警告线或按设定步长下降时提醒"
+                description = text(R.string.alert_channel_description)
             }
         )
     }
 
     private fun money(value: Double): String = String.format(Locale.US, "%.2f", value)
+    private fun text(id: Int, vararg args: Any): String = strings.getString(id, *args)
 
     companion object {
         private const val CHANNEL_ID = "balance_threshold_alerts"

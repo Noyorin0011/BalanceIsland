@@ -1,15 +1,21 @@
 package com.noyorin.balanceisland
 
 import android.app.Application
+import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.noyorin.balanceisland.worker.BalanceRefreshWorker
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import java.util.concurrent.TimeUnit
 
 class BalanceIslandApplication : Application() {
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(AppLanguagePreferences.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
         val constraints = Constraints.Builder()

@@ -2,11 +2,14 @@ package com.noyorin.balanceisland.data
 
 import android.content.Context
 import android.content.Intent
+import com.noyorin.balanceisland.R
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import org.json.JSONObject
 
 /** Per-account balance override, warning threshold and notification cadence. */
 class AccountSettingsStore(context: Context) {
     private val appContext = context.applicationContext
+    private val strings get() = AppLanguagePreferences.wrap(appContext)
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun get(credentialId: String): AccountBalanceSettings {
@@ -31,10 +34,10 @@ class AccountSettingsStore(context: Context) {
     }
 
     fun save(settings: AccountBalanceSettings) {
-        require(settings.warningLine > 0.0) { "警告线必须大于 0" }
-        require(settings.dropStep > 0.0) { "下降提醒步长必须大于 0" }
+        require(settings.warningLine > 0.0) { strings.getString(R.string.validation_warning_positive) }
+        require(settings.dropStep > 0.0) { strings.getString(R.string.validation_drop_positive) }
         require(settings.manualBalance == null || settings.manualBalance >= 0.0) {
-            "手动余额不能小于 0"
+            strings.getString(R.string.validation_manual_nonnegative)
         }
         val json = JSONObject()
             .put("alertEnabled", settings.alertEnabled)

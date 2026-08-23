@@ -68,6 +68,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -82,14 +83,15 @@ import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.CredentialSummary
 import com.noyorin.balanceisland.data.Provider
 import com.noyorin.balanceisland.data.SnapshotStatus
-import com.noyorin.balanceisland.device.DeviceProfiles
-import com.noyorin.balanceisland.display.DisplayBackendSelector
 import com.noyorin.balanceisland.display.OverlayDisplayPreferences
 import com.noyorin.balanceisland.display.ProviderDisplayMode
 import com.noyorin.balanceisland.display.StatusBarPositionPreset
 import com.noyorin.balanceisland.display.StatusBarTextColor
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
 import com.noyorin.balanceisland.quicksettings.BalanceQuickSettingsTileService
+import com.noyorin.balanceisland.localization.AppLanguage
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
+import com.noyorin.balanceisland.service.IslandOverlayService
 import com.noyorin.balanceisland.service.ServiceRuntimePreferences
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -100,13 +102,17 @@ class MainActivity : ComponentActivity() {
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        if (Settings.canDrawOverlays(this)) DisplayBackendSelector.fallback.start(this)
+        if (Settings.canDrawOverlays(this)) IslandOverlayService.start(this)
     }
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) = viewModel.loadCached()
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguagePreferences.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,8 +122,13 @@ class MainActivity : ComponentActivity() {
                 BalanceIslandScreen(
                     viewModel = viewModel,
                     startOverlay = ::startOverlay,
-                    stopOverlay = { DisplayBackendSelector.fallback.stop(this) },
-                    requestQuickSettingsTile = ::requestQuickSettingsTile
+                    stopOverlay = { IslandOverlayService.stop(this) },
+                    requestQuickSettingsTile = ::requestQuickSettingsTile,
+                    changeLanguage = {
+                        AppLanguagePreferences.set(this, it)
+                        viewModel.refresh()
+                        recreate()
+                    }
                 )
             }
         }
@@ -155,7 +166,7 @@ class MainActivity : ComponentActivity() {
                 )
             )
         } else {
-            DisplayBackendSelector.fallback.start(this)
+            IslandOverlayService.start(this)
         }
     }
 
@@ -179,11 +190,11 @@ private fun BalanceIslandScreen(
     viewModel: MainViewModel,
     startOverlay: () -> Unit,
     stopOverlay: () -> Unit,
-    requestQuickSettingsTile: () -> Unit
+    requestQuickSettingsTile: () -> Unit,
+    changeLanguage: (AppLanguage) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
-    val profile = remember { DeviceProfiles.current() }
     val preferences = remember { OverlayDisplayPreferences(context) }
     val runtimePreferences = remember { ServiceRuntimePreferences(context) }
 
@@ -200,11 +211,12 @@ private fun BalanceIslandScreen(
         mutableStateOf(preferences.refreshIntervalMinutes().toString())
     }
     var autoRestart by remember { mutableStateOf(runtimePreferences.autoRestartEnabled()) }
+    var language by remember { mutableStateOf(AppLanguagePreferences.current(context)) }
     var horizontalOffset by remember {
         mutableFloatStateOf(preferences.horizontalOffsetDp().toFloat())
     }
     var verticalOffset by remember {
-        mutableFloatStateOf(preferences.verticalOffsetDp(profile.defaultYOffsetDp).toFloat())
+        mutableFloatStateOf(preferences.verticalOffsetDp().toFloat())
     }
     val snackbar = remember { SnackbarHostState() }
 
@@ -236,18 +248,18 @@ private fun BalanceIslandScreen(
                 .padding(horizontal = 18.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
-            Text("状态栏余额", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.screen_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(
-                "8 家服务商 · 后台恢复 · 分级额度告警",
+                stringResource(R.string.screen_subtitle),
                 color = Color(0xFFAAB0BC),
                 style = MaterialTheme.typography.bodyMedium
             )
 
             StatusBarPreview(state.snapshots, visualStyle, textColor)
 
-            ExpandableSection("账户状态", initiallyExpanded = true) {
+            ExpandableSection(stringResource(R.string.section_account_status), initiallyExpanded = true) {
                 if (state.snapshots.isEmpty()) {
-                    Text("尚未添加 API 账户。", color = Color(0xFFAAB0BC))
+                    Text(stringResource(R.string.no_accounts), color = Color(0xFFAAB0BC))
                 } else {
                     state.snapshots.forEach { SnapshotRow(it) }
                 }
@@ -264,13 +276,13 @@ private fun BalanceIslandScreen(
                         )
                         Spacer(Modifier.size(10.dp))
                     }
-                    Text(if (state.refreshing) "正在查询" else "立即刷新全部")
+                    Text(stringResource(if (state.refreshing) R.string.refreshing else R.string.refresh_all))
                 }
             }
 
-            ExpandableSection("API 账户", initiallyExpanded = true) {
+            ExpandableSection(stringResource(R.string.section_api_accounts), initiallyExpanded = true) {
                 Text(
-                    "同一服务商可添加多个 Key；备注为空时自动显示后四位。",
+                    stringResource(R.string.multi_key_help),
                     color = Color(0xFFAAB0BC),
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -294,8 +306,8 @@ private fun BalanceIslandScreen(
                 OutlinedTextField(
                     value = accountLabel,
                     onValueChange = { accountLabel = it.take(12) },
-                    label = { Text("备注（可选）") },
-                    placeholder = { Text("例如：主账号、测试") },
+                    label = { Text(stringResource(R.string.account_note)) },
+                    placeholder = { Text(stringResource(R.string.account_note_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -306,7 +318,7 @@ private fun BalanceIslandScreen(
                         Text(selectedProvider.keyLabel)
                     },
                     placeholder = { Text(selectedProvider.keyPlaceholder) },
-                    supportingText = { Text(selectedProvider.keyHelp) },
+                    supportingText = { Text(providerHelp(selectedProvider)) },
                     visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
@@ -314,7 +326,7 @@ private fun BalanceIslandScreen(
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = { showKey = !showKey }, modifier = Modifier.weight(1f)) {
-                        Text(if (showKey) "隐藏 Key" else "显示 Key")
+                        Text(stringResource(if (showKey) R.string.hide_key else R.string.show_key))
                     }
                     Button(
                         onClick = {
@@ -324,19 +336,19 @@ private fun BalanceIslandScreen(
                         },
                         enabled = apiKey.isNotBlank() && !state.refreshing,
                         modifier = Modifier.weight(1f)
-                    ) { Text("添加并测试") }
+                    ) { Text(stringResource(R.string.add_and_test)) }
                 }
                 state.credentials.forEach { CredentialRow(it, viewModel::removeCredential) }
                 Text(
-                    "Key 使用 Android Keystore + AES-GCM 加密；界面只显示备注或后四位。",
+                    stringResource(R.string.key_security_help),
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            ExpandableSection("额度警告与手动余额") {
+            ExpandableSection(stringResource(R.string.section_alerts)) {
                 if (state.credentials.isEmpty()) {
-                    Text("添加 API 账户后可逐个设置。", color = Color(0xFFAAB0BC))
+                    Text(stringResource(R.string.add_account_first), color = Color(0xFFAAB0BC))
                 }
                 state.credentials.forEach { summary ->
                     AccountAlertEditor(
@@ -347,18 +359,18 @@ private fun BalanceIslandScreen(
                     )
                 }
                 Text(
-                    "余额 ≤ 警告线×1.5 时变橙；≤ 警告线时变红并推送。下降提醒默认每 5 个货币单位触发一次。",
+                    stringResource(R.string.alert_rule_help),
                     color = Color(0xFFFFB45C),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            ExpandableSection("刷新频率与通知") {
+            ExpandableSection(stringResource(R.string.section_refresh)) {
                 OutlinedTextField(
                     value = refreshMinutes,
                     onValueChange = { refreshMinutes = it.filter(Char::isDigit).take(4) },
-                    label = { Text("查询间隔（分钟）") },
-                    supportingText = { Text("可设置 1–1440；默认 1 分钟。文字条运行时生效。") },
+                    label = { Text(stringResource(R.string.refresh_interval_label)) },
+                    supportingText = { Text(stringResource(R.string.refresh_interval_help)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -370,15 +382,15 @@ private fun BalanceIslandScreen(
                         preferences.setRefreshIntervalMinutes(minutes)
                     },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("保存刷新间隔") }
+                ) { Text(stringResource(R.string.save_refresh_interval)) }
                 Text(
-                    "ColorOS 可能限制后台定时；保持状态栏文字条运行并允许后台活动，可获得最稳定的分钟级查询。",
+                    stringResource(R.string.background_refresh_help),
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            ExpandableSection("显示账户") {
+            ExpandableSection(stringResource(R.string.section_display_accounts)) {
                 ProviderDisplayMode.entries.forEach { mode ->
                     val enabled = mode.provider == null ||
                         state.credentials.any { it.provider == mode.provider }
@@ -389,18 +401,18 @@ private fun BalanceIslandScreen(
                             preferences.setMode(mode)
                         },
                         enabled = enabled,
-                        label = { Text(mode.label) },
+                        label = { Text(mode.localizedLabel()) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
                 Text(
-                    "自动模式每 5 秒轮播；点按文字条立即切换账户。",
+                    stringResource(R.string.display_rotation_help),
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            ExpandableSection("位置预设") {
+            ExpandableSection(stringResource(R.string.section_position)) {
                 StatusBarPositionPreset.entries.forEach { preset ->
                     FilterChip(
                         selected = position == preset,
@@ -408,11 +420,11 @@ private fun BalanceIslandScreen(
                             position = preset
                             preferences.setPosition(preset)
                         },
-                        label = { Text(preset.label) },
+                        label = { Text(preset.localizedLabel()) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                Text("额外左右偏移：${horizontalOffset.toInt()} dp")
+                Text(stringResource(R.string.horizontal_offset, horizontalOffset.toInt()))
                 Slider(
                     value = horizontalOffset,
                     onValueChange = { horizontalOffset = it },
@@ -421,7 +433,7 @@ private fun BalanceIslandScreen(
                     },
                     valueRange = 0f..160f
                 )
-                Text("上下偏移：${verticalOffset.toInt()} dp")
+                Text(stringResource(R.string.vertical_offset, verticalOffset.toInt()))
                 Slider(
                     value = verticalOffset,
                     onValueChange = { verticalOffset = it },
@@ -431,13 +443,13 @@ private fun BalanceIslandScreen(
                     valueRange = 0f..72f
                 )
                 Text(
-                    "PLC110 圆角安全预设自动增加 ${profile.roundedCornerSafeInsetDp}dp 侧边留白。",
+                    stringResource(R.string.safe_area_help),
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            ExpandableSection("文字样式") {
+            ExpandableSection(stringResource(R.string.section_style)) {
                 StatusBarVisualStyle.entries.forEach { style ->
                     FilterChip(
                         selected = visualStyle == style,
@@ -445,11 +457,11 @@ private fun BalanceIslandScreen(
                             visualStyle = style
                             preferences.setVisualStyle(style)
                         },
-                        label = { Text(style.label) },
+                        label = { Text(style.localizedLabel()) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                Text("正常余额文字颜色")
+                Text(stringResource(R.string.normal_text_color))
                 StatusBarTextColor.entries.forEach { preset ->
                     FilterChip(
                         selected = textColor == preset,
@@ -460,26 +472,26 @@ private fun BalanceIslandScreen(
                         leadingIcon = {
                             Box(Modifier.size(14.dp).background(Color(preset.argb), CircleShape))
                         },
-                        label = { Text(preset.label) },
+                        label = { Text(preset.localizedLabel()) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
                 Text(
-                    "警告状态会自动覆盖颜色：临近线为橙色，越线为红色。",
+                    stringResource(R.string.warning_color_help),
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            ExpandableSection("后台运行与控制中心", initiallyExpanded = true) {
+            ExpandableSection(stringResource(R.string.section_background), initiallyExpanded = true) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("被回收后自动恢复", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.auto_restart), fontWeight = FontWeight.SemiBold)
                         Text(
-                            "记住运行状态；划掉任务、重启手机或应用升级后尝试恢复。",
+                            stringResource(R.string.auto_restart_help),
                             color = Color(0xFF9CA3AF),
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -495,26 +507,45 @@ private fun BalanceIslandScreen(
                 Button(
                     onClick = requestQuickSettingsTile,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("添加“余额监控”控制中心按钮") }
+                ) { Text(stringResource(R.string.add_quick_tile)) }
                 Text(
-                    "磁贴可直接启动/停止文字条。ColorOS 还建议允许本应用自启动、后台活动，并关闭电池优化。",
+                    stringResource(R.string.quick_tile_help),
                     color = Color(0xFFFFB45C),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            ExpandableSection("运行", initiallyExpanded = true) {
+            ExpandableSection(stringResource(R.string.section_language)) {
+                AppLanguage.entries.forEach { option ->
+                    FilterChip(
+                        selected = language == option,
+                        onClick = {
+                            language = option
+                            changeLanguage(option)
+                        },
+                        label = { Text(option.localizedLabel()) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 Text(
-                    "设备：${profile.displayName} · ${DeviceProfiles.softwareLabel()}",
+                    stringResource(R.string.language_help),
+                    color = Color(0xFF9CA3AF),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            ExpandableSection(stringResource(R.string.section_run), initiallyExpanded = true) {
+                Text(
+                    stringResource(R.string.generic_device_info),
                     color = Color(0xFF73E0C1),
                     style = MaterialTheme.typography.bodySmall
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = startOverlay, modifier = Modifier.weight(1f)) { Text("启动文字条") }
-                    FilledTonalButton(onClick = stopOverlay, modifier = Modifier.weight(1f)) { Text("停止") }
+                    Button(onClick = startOverlay, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.start_overlay)) }
+                    FilledTonalButton(onClick = stopOverlay, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.stop)) }
                 }
                 Text(
-                    "首次启动需授予通知和“显示在其他应用上层”；长按文字条返回设置。",
+                    stringResource(R.string.permission_help),
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -596,7 +627,7 @@ private fun AccountAlertEditor(
         OutlinedTextField(
             value = warningLine,
             onValueChange = { warningLine = decimalInput(it) },
-            label = { Text("警告线") },
+            label = { Text(stringResource(R.string.warning_line)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -604,7 +635,7 @@ private fun AccountAlertEditor(
         OutlinedTextField(
             value = dropStep,
             onValueChange = { dropStep = decimalInput(it) },
-            label = { Text("每下降多少货币单位推送") },
+            label = { Text(stringResource(R.string.drop_notification_step)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -612,8 +643,8 @@ private fun AccountAlertEditor(
         OutlinedTextField(
             value = manualBalance,
             onValueChange = { manualBalance = decimalInput(it) },
-            label = { Text("手动显示余额（可选）") },
-            supportingText = { Text("留空使用 API；填写后按此数值显示和告警。") },
+            label = { Text(stringResource(R.string.manual_balance)) },
+            supportingText = { Text(stringResource(R.string.manual_balance_help)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -633,7 +664,7 @@ private fun AccountAlertEditor(
             enabled = (warningLine.toDoubleOrNull() ?: 0.0) > 0.0 &&
                 (dropStep.toDoubleOrNull() ?: 0.0) > 0.0,
             modifier = Modifier.fillMaxWidth()
-        ) { Text("保存该账户设置") }
+        ) { Text(stringResource(R.string.save_account_settings)) }
     }
 }
 
@@ -677,7 +708,7 @@ private fun StatusBarPreview(
             if (snapshot != null) ProviderLogo(snapshot.provider, 18)
             else Box(Modifier.size(18.dp).background(Color(0xFFFFBE46), CircleShape))
             Text(
-                if (snapshot == null) " 请先配置 API" else "$qualifier ${snapshot.primaryText}",
+                if (snapshot == null) stringResource(R.string.configure_api) else "$qualifier ${snapshot.primaryText}",
                 color = displayColor,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -697,9 +728,9 @@ private fun CredentialRow(summary: CredentialSummary, remove: (String) -> Unit) 
         ProviderLogo(summary.provider, 30)
         Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text("${summary.provider.displayName} · ${summary.displayLabel}", fontWeight = FontWeight.SemiBold)
-            Text("Key 后四位：${summary.keySuffix}", color = Color(0xFF7E8592), style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.key_suffix, summary.keySuffix), color = Color(0xFF7E8592), style = MaterialTheme.typography.labelSmall)
         }
-        TextButton(onClick = { remove(summary.id) }) { Text("删除", color = Color(0xFFFF7A86)) }
+        TextButton(onClick = { remove(summary.id) }) { Text(stringResource(R.string.delete), color = Color(0xFFFF7A86)) }
     }
 }
 
@@ -790,6 +821,61 @@ private fun statusColor(status: SnapshotStatus) = when (status) {
     SnapshotStatus.ERROR -> Color(0xFFFF6470)
     SnapshotStatus.NOT_CONFIGURED -> Color(0xFF8C919B)
 }
+
+@Composable
+private fun ProviderDisplayMode.localizedLabel(): String = provider?.let {
+    stringResource(R.string.mode_pin_provider, it.displayName)
+} ?: stringResource(R.string.mode_auto)
+
+@Composable
+private fun StatusBarPositionPreset.localizedLabel(): String = stringResource(
+    when (this) {
+        StatusBarPositionPreset.LEFT_SAFE -> R.string.position_left_safe
+        StatusBarPositionPreset.RIGHT_SAFE -> R.string.position_right_safe
+        StatusBarPositionPreset.LEFT_EDGE -> R.string.position_left_edge
+        StatusBarPositionPreset.RIGHT_EDGE -> R.string.position_right_edge
+    }
+)
+
+@Composable
+private fun StatusBarVisualStyle.localizedLabel(): String = stringResource(
+    if (this == StatusBarVisualStyle.TEXT_ONLY) R.string.style_text_only
+    else R.string.style_translucent_pill
+)
+
+@Composable
+private fun StatusBarTextColor.localizedLabel(): String = stringResource(
+    when (this) {
+        StatusBarTextColor.WHITE -> R.string.color_white
+        StatusBarTextColor.MINT -> R.string.color_mint
+        StatusBarTextColor.SKY -> R.string.color_sky
+        StatusBarTextColor.CORAL -> R.string.color_coral
+        StatusBarTextColor.LIME -> R.string.color_lime
+    }
+)
+
+@Composable
+private fun AppLanguage.localizedLabel(): String = stringResource(
+    when (this) {
+        AppLanguage.SYSTEM -> R.string.language_system
+        AppLanguage.SIMPLIFIED_CHINESE -> R.string.language_chinese
+        AppLanguage.ENGLISH -> R.string.language_english
+    }
+)
+
+@Composable
+private fun providerHelp(provider: Provider): String = stringResource(
+    when (provider) {
+        Provider.DEEPSEEK -> R.string.provider_help_deepseek
+        Provider.OPENAI -> R.string.provider_help_openai
+        Provider.OPENROUTER -> R.string.provider_help_openrouter
+        Provider.SILICONFLOW -> R.string.provider_help_siliconflow
+        Provider.MOONSHOT -> R.string.provider_help_moonshot
+        Provider.ANTHROPIC -> R.string.provider_help_anthropic
+        Provider.GEMINI -> R.string.provider_help_gemini
+        Provider.XAI -> R.string.provider_help_xai
+    }
+)
 
 @Composable
 private fun BalanceIslandTheme(content: @Composable () -> Unit) {

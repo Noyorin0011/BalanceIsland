@@ -11,40 +11,31 @@ enum class Provider(
     val defaultCurrency: String,
     val keyLabel: String,
     val keyPlaceholder: String,
-    val keyHelp: String,
     val balanceCapability: BalanceCapability
 ) {
     DEEPSEEK(
-        "DeepSeek", "CNY", "DeepSeek API Key", "sk-...",
-        "直接读取账户余额。", BalanceCapability.DIRECT_BALANCE
+        "DeepSeek", "CNY", "DeepSeek API Key", "sk-...", BalanceCapability.DIRECT_BALANCE
     ),
     OPENAI(
-        "OpenAI", "USD", "OpenAI Admin API Key", "sk-admin-...",
-        "Costs 需要组织 Owner 创建的 Admin Key。", BalanceCapability.USAGE_OR_LIMIT
+        "OpenAI", "USD", "OpenAI Admin API Key", "sk-admin-...", BalanceCapability.USAGE_OR_LIMIT
     ),
     OPENROUTER(
-        "OpenRouter", "USD", "OpenRouter Management Key", "sk-or-...",
-        "余额接口需要 Management Key，普通推理 Key 可能返回 403。", BalanceCapability.DIRECT_BALANCE
+        "OpenRouter", "USD", "OpenRouter Management Key", "sk-or-...", BalanceCapability.DIRECT_BALANCE
     ),
     SILICONFLOW(
-        "SiliconFlow", "CNY", "SiliconFlow API Key", "sk-...",
-        "通过官方 /user/info 接口读取总余额。", BalanceCapability.DIRECT_BALANCE
+        "SiliconFlow", "CNY", "SiliconFlow API Key", "sk-...", BalanceCapability.DIRECT_BALANCE
     ),
     MOONSHOT(
-        "Kimi / Moonshot", "CNY", "Moonshot API Key", "sk-...",
-        "普通 Key 仅验证可用性；余额请在账户设置中手动填写。", BalanceCapability.KEY_CHECK_ONLY
+        "Kimi / Moonshot", "CNY", "Moonshot API Key", "sk-...", BalanceCapability.KEY_CHECK_ONLY
     ),
     ANTHROPIC(
-        "Anthropic", "USD", "Anthropic API Key", "sk-ant-...",
-        "普通 Key 不提供剩余余额；验证后可设置手动余额。", BalanceCapability.KEY_CHECK_ONLY
+        "Anthropic", "USD", "Anthropic API Key", "sk-ant-...", BalanceCapability.KEY_CHECK_ONLY
     ),
     GEMINI(
-        "Google Gemini", "USD", "Gemini API Key", "AIza...",
-        "Google AI Studio Key 不提供剩余余额；验证后可设置手动余额。", BalanceCapability.KEY_CHECK_ONLY
+        "Google Gemini", "USD", "Gemini API Key", "AIza...", BalanceCapability.KEY_CHECK_ONLY
     ),
     XAI(
-        "xAI / Grok", "USD", "xAI API Key", "xai-...",
-        "普通 Key 不提供剩余余额；验证后可设置手动余额。", BalanceCapability.KEY_CHECK_ONLY
+        "xAI / Grok", "USD", "xAI API Key", "xai-...", BalanceCapability.KEY_CHECK_ONLY
     )
 }
 
@@ -91,19 +82,22 @@ data class BalanceSnapshot(
         get() = accountLabel.ifBlank { "••••$keySuffix" }
 
     companion object {
-        fun waiting(credential: ApiCredential) = BalanceSnapshot(
+        fun waiting(context: android.content.Context, credential: ApiCredential): BalanceSnapshot {
+            val strings = com.noyorin.balanceisland.localization.AppLanguagePreferences.wrap(context)
+            return BalanceSnapshot(
             provider = credential.provider,
             credentialId = credential.id,
             accountLabel = credential.label,
             keySuffix = credential.keySuffix,
-            primaryText = "等待查询",
-            secondaryText = "点击立即刷新",
+            primaryText = strings.getString(com.noyorin.balanceisland.R.string.snapshot_waiting),
+            secondaryText = strings.getString(com.noyorin.balanceisland.R.string.snapshot_tap_refresh),
             balanceAmount = null,
             currencyCode = credential.provider.defaultCurrency,
             isManualBalance = false,
             status = SnapshotStatus.NOT_CONFIGURED,
             updatedAtEpochMillis = 0L
-        )
+            )
+        }
     }
 }
 

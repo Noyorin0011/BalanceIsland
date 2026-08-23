@@ -1,13 +1,13 @@
 # 状态栏余额（Balance Island）MVP
 
-一个原生 Android 应用，用状态栏顶部的透明文字条显示多家 AI API 的余额、预算或 Key 状态。默认避开中间挖孔，首要适配一加 Ace 5 至尊版 `PLC110`、ColorOS `PLC110_16.0.7.200`。
+一个原生 Android 应用，用状态栏顶部的透明文字条显示多家 AI API 的余额、预算或 Key 状态。面向 Android 8.0 及以上的大多数手机和平板，不绑定特定品牌或型号。
 
 > 当前交付为可构建源码。生成环境没有 Android SDK，因此未在此处产出 APK；请在 Android Studio 中执行 Gradle Sync 和真机构建。后续测试步骤见 `CODEX_TASK_SPEC.md`。
 
 ## 已实现
 
 - Kotlin + Jetpack Compose 设置页，所有功能按可伸缩分类卡片组织。
-- `TYPE_APPLICATION_OVERLAY` 状态栏单行文字条，不依赖 OPPO 流体云审核。
+- `TYPE_APPLICATION_OVERLAY` 状态栏单行文字条，不依赖厂商专有卡片或私有 SystemUI 接口。
 - 仅显示已配置的 API 账户；支持 DeepSeek、OpenAI、OpenRouter、SiliconFlow、Kimi/Moonshot、Anthropic、Google Gemini、xAI/Grok。
 - 同一服务商可保存多个 Key，并分别缓存、刷新和轮播。
 - 展示格式：`服务商真实图标［备注或 Key 后四位］余额`，不再显示外侧界定符。
@@ -15,7 +15,7 @@
 - 自动轮播全部已配置账户，或固定任一已配置服务商；每 5 秒切换。
 - 点按文字条立即切换账户，长按返回设置。
 - 左上/右上圆角安全区、左上/右上贴边四种预设。
-- PLC110 圆角安全预设默认预留 `28dp` 侧边空间，可继续调水平、垂直偏移。
+- 圆角安全预设读取 Android DisplayCutout、RoundedCorner 和状态栏 Insets，并保留通用最小侧边空间。
 - 透明文字与半透明底两种样式，内置五种文字颜色。
 - 文字条运行时默认每 1 分钟查询，可自定义 `1–1440` 分钟。
 - 每账户独立额度警告：余额小于等于警告线 `×1.5` 时橙色，越过警告线时红色并推送。
@@ -28,7 +28,7 @@
 - 文字条前台服务负责分钟级刷新；服务未运行时由 WorkManager 以系统允许的 15 分钟周期兜底。
 - 控制中心“余额监控”磁贴可一键启动/停止文字条；Android 13+ 可在应用内请求添加。
 - 可选“被回收后自动恢复”：结合 `START_STICKY`、任务移除延迟恢复、开机完成和应用升级广播恢复服务。
-- 保留 OPPO Pantanal UPK + SeedlingSupportSDK 非编译接入骨架，但默认不启用。
+- 内置简体中文和英文，可在应用内选择或跟随系统；界面、文字条与系统通知同步切换。
 
 ## 状态栏示例
 
@@ -83,22 +83,16 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 7. 在“位置预设”选择左/右圆角安全区，点击“启动文字条”并授予权限。
 8. 若位置与系统图标重叠，用水平/垂直滑块微调；点按切换账户，长按打开设置。
 
-## PLC110 适配
+## 通用设备适配
 
-设备识别会匹配 `MODEL/DEVICE/PRODUCT/DISPLAY/INCREMENTAL` 中的 `PLC110`。该配置使用：
+文字条使用系统公开的 WindowInsets 自动读取状态栏高度、显示缺口和顶部圆角半径。安全区预设会自动避让屏幕边缘，贴边预设保留少量通用边距；不同系统仍可使用 X/Y 滑块即时微调。工程不包含任何品牌、型号或厂商卡片 SDK 特判。
 
-- 文字条高度：`26dp`
-- 圆角安全侧边距：`28dp`
-- 默认顶部偏移：`13dp`
-- 单行最大内容宽度：`210dp`
+## 多语言
 
-该文字条不会接管 SystemUI。ColorOS 若把第三方悬浮层置于状态栏下方，可增加垂直偏移，把文字移至状态栏下沿。
-
-## 流体云说明
-
-原生 ColorOS 流体云不是普通 Android 通知/悬浮窗接口。侧载 APK 不能强制出卡；需要申请泛在卡片服务、发布 UPK、取得服务 ID/事件码，并接入 SeedlingSupportSDK。
-
-因此默认版本使用可独立安装的状态栏文字悬浮层。工程不反射隐藏 SystemUI API，也不以静音媒体通知冒充流体云。获批后的接入骨架在 `oppo-fluid-cloud/`。
+- 默认跟随系统语言。
+- 设置页可切换简体中文或 English。
+- Android 13+ 同时声明系统“应用语言”支持；旧版 Android 使用应用内语言配置。
+- 新语言只需在 `app/src/main/res/values-语言代码/strings.xml` 增加同名资源。
 
 ## 安全说明
 
@@ -108,14 +102,12 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 
 ## 已知限制
 
-- 尚未在 `PLC110_16.0.7.200` 真机验证，需要根据截图微调 X/Y 默认值。
-- ColorOS 可能限制后台运行，需要手动允许自启动和后台活动。
+- 不同品牌的状态栏图标布局和后台省电策略不同，首次使用可能需要微调 X/Y，并手动允许自启动或后台活动。
 - 系统设置中的“强行停止”会阻止广播和后台恢复；应用不会也不能绕过 Android 的强停语义。
 - WorkManager 周期任务最短为 15 分钟，执行时间可能被省电策略推迟。
 - 1 分钟刷新依赖文字条前台服务持续运行；过高查询频率可能触发供应商限流或增加电耗。
 - OpenAI Costs 数据可能存在账单处理延迟；当前还未处理 Costs 分页。
 - 品牌图标仅用于识别 API 服务商，不代表厂商背书；正式公开发布前应再次审阅商标条款。
-- 原生流体云必须在 OPPO 批准并发布 UPK 后才能完成真机出卡。
 
 ## 官方接口
 
@@ -127,4 +119,3 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - Anthropic Models：<https://docs.anthropic.com/en/api/models-list>
 - Gemini Models：<https://ai.google.dev/api/models>
 - xAI API：<https://docs.x.ai/docs/overview>
-- OPPO 流体云模板：<https://open.oppomobile.com/documentation/page/info?id=12658>

@@ -1,6 +1,8 @@
 package com.noyorin.balanceisland.ui
 
 import android.app.Application
+import com.noyorin.balanceisland.R
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.noyorin.balanceisland.data.BalanceRepository
@@ -38,13 +40,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addCredential(provider: Provider, label: String, apiKey: String) {
         if (apiKey.isBlank()) {
-            _uiState.value = _uiState.value.copy(message = "API Key 不能为空")
+            _uiState.value = _uiState.value.copy(message = text(R.string.message_key_empty))
             return
         }
         val saveResult = runCatching { keys.addCredential(provider, label, apiKey) }
         if (saveResult.isFailure) {
             _uiState.value = _uiState.value.copy(
-                message = saveResult.exceptionOrNull()?.message ?: "保存失败"
+                message = saveResult.exceptionOrNull()?.message ?: text(R.string.message_save_failed)
             )
             return
         }
@@ -55,7 +57,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             refreshing = true,
             message = null
         )
-        refresh(messageOnSuccess = "账户已加密保存")
+        refresh(messageOnSuccess = text(R.string.message_account_saved))
     }
 
     fun removeCredential(id: String) {
@@ -66,7 +68,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             credentials = keys.summaries(),
             snapshots = repository.cached(),
             accountSettings = settingsFor(keys.summaries()),
-            message = "账户已删除"
+            message = text(R.string.message_account_deleted)
         )
     }
 
@@ -76,10 +78,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value.copy(
                 snapshots = repository.cached(),
                 accountSettings = settingsFor(keys.summaries()),
-                message = "额度与警告设置已保存"
+                message = text(R.string.message_settings_saved)
             )
         } else {
-            _uiState.value.copy(message = result.exceptionOrNull()?.message ?: "设置保存失败")
+            _uiState.value.copy(message = result.exceptionOrNull()?.message ?: text(R.string.message_settings_failed))
         }
     }
 
@@ -112,4 +114,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun settingsFor(credentials: List<CredentialSummary>): Map<String, AccountBalanceSettings> =
         credentials.associate { it.id to accountSettingsStore.get(it.id) }
+
+    private fun text(id: Int): String =
+        AppLanguagePreferences.wrap(getApplication()).getString(id)
 }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import com.noyorin.balanceisland.R
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import org.json.JSONArray
 import org.json.JSONObject
 import java.nio.ByteBuffer
@@ -16,6 +18,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 /** Stores API keys encrypted with a non-exportable key in Android Keystore. */
 class SecureKeyStore(context: Context) {
+    private val appContext = context.applicationContext
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun credentials(): List<ApiCredential> {
@@ -45,7 +48,9 @@ class SecureKeyStore(context: Context) {
 
     fun addCredential(provider: Provider, label: String, apiKey: String): ApiCredential {
         val cleanedKey = apiKey.trim()
-        require(cleanedKey.isNotBlank()) { "API Key 不能为空" }
+        require(cleanedKey.isNotBlank()) {
+            AppLanguagePreferences.wrap(appContext).getString(R.string.message_key_empty)
+        }
         val current = credentials().toMutableList()
         val existingIndex = current.indexOfFirst {
             it.provider == provider && it.apiKey == cleanedKey

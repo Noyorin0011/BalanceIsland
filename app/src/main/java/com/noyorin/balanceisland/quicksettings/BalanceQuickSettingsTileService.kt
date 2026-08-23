@@ -8,6 +8,7 @@ import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.noyorin.balanceisland.R
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import com.noyorin.balanceisland.service.IslandOverlayService
 import com.noyorin.balanceisland.service.ServiceRuntimePreferences
 
@@ -49,12 +50,13 @@ class BalanceQuickSettingsTileService : TileService() {
     }
 
     private fun updateTile() {
+        val strings = AppLanguagePreferences.wrap(this)
         qsTile?.apply {
             val active = runtime.desiredRunning() || runtime.serviceRunning()
             state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            label = getString(R.string.quick_settings_tile_label)
+            label = strings.getString(R.string.quick_settings_tile_label)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                subtitle = if (active) "运行中" else "已停止"
+                subtitle = strings.getString(if (active) R.string.tile_running else R.string.tile_stopped)
             }
             updateTile()
         }

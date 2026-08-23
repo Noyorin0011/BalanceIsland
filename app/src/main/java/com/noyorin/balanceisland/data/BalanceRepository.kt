@@ -2,6 +2,8 @@ package com.noyorin.balanceisland.data
 
 import android.content.Context
 import android.content.Intent
+import com.noyorin.balanceisland.R
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -15,6 +17,7 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class BalanceRepository(private val context: Context) {
+    private val strings get() = AppLanguagePreferences.wrap(context)
     private val keys = SecureKeyStore(context)
     private val snapshots = SnapshotStore(context)
     private val accountSettings = AccountSettingsStore(context)
@@ -64,7 +67,7 @@ class BalanceRepository(private val context: Context) {
                 credentialId = credential.id,
                 accountLabel = credential.label,
                 keySuffix = credential.keySuffix,
-                primaryText = "查询失败",
+                primaryText = text(R.string.snapshot_query_failed),
                 secondaryText = readableError(throwable),
                 balanceAmount = null,
                 currencyCode = credential.provider.defaultCurrency,
@@ -81,8 +84,8 @@ class BalanceRepository(private val context: Context) {
             bearerToken = credential.apiKey
         )
         val infos = json.optJSONArray("balance_infos")
-            ?: throw ApiException("响应中没有余额信息")
-        if (infos.length() == 0) throw ApiException("账户没有可用币种")
+            ?: throw ApiException(text(R.string.error_missing_balance))
+        if (infos.length() == 0) throw ApiException(text(R.string.error_no_currency))
 
         val selected = (0 until infos.length())
             .map { infos.getJSONObject(it) }
@@ -102,7 +105,11 @@ class BalanceRepository(private val context: Context) {
             accountLabel = credential.label,
             keySuffix = credential.keySuffix,
             primaryText = "$sign${money(total)}",
-            secondaryText = "充值 $sign${money(toppedUp)} · 赠送 $sign${money(granted)}",
+            secondaryText = text(
+                R.string.snapshot_topup_grant,
+                "$sign${money(toppedUp)}",
+                "$sign${money(granted)}"
+            ),
             balanceAmount = total,
             currencyCode = currency,
             isManualBalance = false,
@@ -128,7 +135,7 @@ class BalanceRepository(private val context: Context) {
         val costsJson = getJson(costsUrl.toString(), credential.apiKey)
         var spent = 0.0
         val buckets = costsJson.optJSONArray("data")
-            ?: throw ApiException("响应中没有消费数据")
+            ?: throw ApiException(text(R.string.error_missing_usage))
         for (i in 0 until buckets.length()) {
             val results = buckets.getJSONObject(i).optJSONArray("results") ?: continue
             for (j in 0 until results.length()) {
@@ -152,8 +159,12 @@ class BalanceRepository(private val context: Context) {
                 credentialId = credential.id,
                 accountLabel = credential.label,
                 keySuffix = credential.keySuffix,
-                primaryText = "$${money(remaining)} 可用",
-                secondaryText = "本月已用 $${money(spent)} / 上限 $${money(limit)}",
+                primaryText = text(R.string.snapshot_available, "$${money(remaining)}"),
+                secondaryText = text(
+                    R.string.snapshot_month_used_limit,
+                    "$${money(spent)}",
+                    "$${money(limit)}"
+                ),
                 balanceAmount = remaining,
                 currencyCode = "USD",
                 isManualBalance = false,
@@ -166,8 +177,8 @@ class BalanceRepository(private val context: Context) {
                 credentialId = credential.id,
                 accountLabel = credential.label,
                 keySuffix = credential.keySuffix,
-                primaryText = "本月 $${money(spent)}",
-                secondaryText = "未设置可读取的硬消费上限",
+                primaryText = text(R.string.snapshot_month_spend, "$${money(spent)}"),
+                secondaryText = text(R.string.snapshot_no_limit),
                 balanceAmount = null,
                 currencyCode = "USD",
                 isManualBalance = false,
@@ -181,7 +192,7 @@ class BalanceRepository(private val context: Context) {
         val data = getJson(
             "https://openrouter.ai/api/v1/credits",
             credential.apiKey
-        ).optJSONObject("data") ?: throw ApiException("响应中没有额度数据")
+        ).optJSONObject("data") ?: throw ApiException(text(R.string.error_missing_credit))
         val purchased = data.number("total_credits")
         val used = data.number("total_usage")
         val remaining = (purchased - used).coerceAtLeast(0.0)
@@ -191,7 +202,11 @@ class BalanceRepository(private val context: Context) {
             accountLabel = credential.label,
             keySuffix = credential.keySuffix,
             primaryText = "$${money(remaining)}",
-            secondaryText = "累计充值 $${money(purchased)} · 已用 $${money(used)}",
+            secondaryText = text(
+                R.string.snapshot_purchased_used,
+                "$${money(purchased)}",
+                "$${money(used)}"
+            ),
             balanceAmount = remaining,
             currencyCode = "USD",
             isManualBalance = false,
@@ -204,11 +219,11 @@ class BalanceRepository(private val context: Context) {
         val data = getJson(
             "https://api.siliconflow.cn/v1/user/info",
             credential.apiKey
-        ).optJSONObject("data") ?: throw ApiException("响应中没有账户数据")
+        ).optJSONObject("data") ?: throw ApiException(text(R.string.error_missing_account))
         val total = data.numberOrNull("totalBalance")
             ?: data.numberOrNull("total_balance")
             ?: data.numberOrNull("balance")
-            ?: throw ApiException("响应中没有可识别的余额字段")
+            ?: throw ApiException(text(R.string.error_missing_recognizable_balance))
         val charged = data.numberOrNull("chargeBalance")
             ?: data.numberOrNull("charge_balance")
         val gifted = data.numberOrNull("balance")
@@ -219,12 +234,12 @@ class BalanceRepository(private val context: Context) {
             keySuffix = credential.keySuffix,
             primaryText = "¥${money(total)}",
             secondaryText = buildString {
-                if (charged != null) append("充值 ¥${money(charged)}")
+                if (charged != null) append(text(R.string.snapshot_topup, "¥${money(charged)}"))
                 if (gifted != null) {
                     if (isNotEmpty()) append(" · ")
-                    append("赠送 ¥${money(gifted)}")
+                    append(text(R.string.snapshot_grant, "¥${money(gifted)}"))
                 }
-                if (isEmpty()) append("官方账户总余额")
+                if (isEmpty()) append(text(R.string.snapshot_official_total))
             },
             balanceAmount = total,
             currencyCode = "CNY",
@@ -255,8 +270,8 @@ class BalanceRepository(private val context: Context) {
         credentialId = credential.id,
         accountLabel = credential.label,
         keySuffix = credential.keySuffix,
-        primaryText = "Key 可用",
-        secondaryText = "官方未向普通 API Key 提供剩余余额，请设置手动余额",
+        primaryText = text(R.string.snapshot_key_valid),
+        secondaryText = text(R.string.snapshot_manual_required),
         balanceAmount = null,
         currencyCode = credential.provider.defaultCurrency,
         isManualBalance = false,
@@ -278,7 +293,7 @@ class BalanceRepository(private val context: Context) {
 
         return raw.copy(
             primaryText = "${currencySymbol(raw.currencyCode)}${money(settings.manualBalance)}",
-            secondaryText = "手动余额 · 接口状态：${raw.primaryText}",
+            secondaryText = text(R.string.snapshot_manual_status, raw.primaryText),
             balanceAmount = settings.manualBalance,
             isManualBalance = true,
             status = status
@@ -313,21 +328,23 @@ class BalanceRepository(private val context: Context) {
                     if (message.isBlank()) "HTTP ${response.code}" else "HTTP ${response.code}: $message"
                 )
             }
-            if (body.isBlank()) throw ApiException("服务返回空响应")
+            if (body.isBlank()) throw ApiException(text(R.string.error_empty_response))
             JSONObject(body)
         }
     }
 
     private fun readableError(throwable: Throwable): String = when (throwable) {
-        is ApiException -> throwable.message ?: "API 返回错误"
-        is IOException -> "网络连接失败，请稍后重试"
-        else -> throwable.message?.take(100) ?: "未知错误"
+        is ApiException -> throwable.message ?: text(R.string.error_api)
+        is IOException -> text(R.string.error_network)
+        else -> throwable.message?.take(100) ?: text(R.string.error_unknown)
     }
 
     private fun money(value: Double): String = String.format(Locale.US, "%.2f", value)
 
     private fun JSONObject.number(name: String): Double = numberOrNull(name)
-        ?: throw ApiException("响应中没有 $name")
+        ?: throw ApiException(text(R.string.error_missing_field, name))
+
+    private fun text(id: Int, vararg args: Any): String = strings.getString(id, *args)
 
     private fun JSONObject.numberOrNull(name: String): Double? {
         if (!has(name) || isNull(name)) return null

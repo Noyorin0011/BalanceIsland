@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
@@ -21,6 +22,8 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.Gravity
+import android.view.RoundedCorner
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -33,8 +36,6 @@ import com.noyorin.balanceisland.data.BalanceRepository
 import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.Provider
 import com.noyorin.balanceisland.data.SnapshotStatus
-import com.noyorin.balanceisland.device.DeviceProfile
-import com.noyorin.balanceisland.device.DeviceProfiles
 import com.noyorin.balanceisland.display.OverlayDisplayPreferences
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
 import com.noyorin.balanceisland.ui.MainActivity
@@ -46,6 +47,11 @@ import kotlinx.coroutines.launch
 
 /** A compact status-bar text overlay. It intentionally avoids the center cutout. */
 class IslandOverlayService : Service() {
+    private val strings get() = AppLanguagePreferences.wrap(this)
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguagePreferences.wrap(newBase))
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var windowManager: WindowManager
@@ -53,7 +59,6 @@ class IslandOverlayService : Service() {
     private lateinit var params: WindowManager.LayoutParams
     private lateinit var repository: BalanceRepository
     private lateinit var displayPreferences: OverlayDisplayPreferences
-    private lateinit var profile: DeviceProfile
     private lateinit var runtimePreferences: ServiceRuntimePreferences
     private var visibleAccountIndex = 0
     private var refreshInProgress = false
@@ -63,7 +68,9 @@ class IslandOverlayService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             applyPosition()
             render()
-            if (intent?.action == OverlayDisplayPreferences.ACTION_DISPLAY_SETTINGS_CHANGED) {
+            if (intent?.action == OverlayDisplayPreferences.ACTION_DISPLAY_SETTINGS_CHANGED ||
+                intent?.action == AppLanguagePreferences.ACTION_LANGUAGE_CHANGED
+            ) {
                 startForeground(NOTIFICATION_ID, buildNotification())
                 scheduleNextRefresh()
             }
@@ -83,7 +90,6 @@ class IslandOverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        profile = DeviceProfiles.current()
         repository = BalanceRepository(this)
         displayPreferences = OverlayDisplayPreferences(this)
         runtimePreferences = ServiceRuntimePreferences(this)
@@ -108,7 +114,7 @@ class IslandOverlayService : Service() {
         }
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
-            dp(profile.statusBarTextHeightDp),
+            overlayHeightPx(),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -127,6 +133,7 @@ class IslandOverlayService : Service() {
         val filter = IntentFilter().apply {
             addAction(BalanceRepository.ACTION_BALANCE_UPDATED)
             addAction(OverlayDisplayPreferences.ACTION_DISPLAY_SETTINGS_CHANGED)
+            addAction(AppLanguagePreferences.ACTION_LANGUAGE_CHANGED)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(updateReceiver, filter, RECEIVER_NOT_EXPORTED)
@@ -182,12 +189,17 @@ class IslandOverlayService : Service() {
     private fun applyPosition() {
         if (!::params.isInitialized) return
         val preset = displayPreferences.position()
-        val safeInset = if (preset.roundedCornerSafeArea) profile.roundedCornerSafeInsetDp else 8
         params.gravity = Gravity.TOP or if (preset.alignStart) Gravity.START else Gravity.END
-        params.x = dp(safeInset + displayPreferences.horizontalOffsetDp())
-        params.y = dp(displayPreferences.verticalOffsetDp(profile.defaultYOffsetDp))
+        val baseHorizontalInset = if (preset.roundedCornerSafeArea) {
+            safeHorizontalInsetPx(preset.alignStart)
+        } else {
+            dp(MIN_EDGE_INSET_DP)
+        }
+        params.x = baseHorizontalInset + dp(displayPreferences.horizontalOffsetDp())
+        val centeredY = ((statusBarHeightPx() - overlayHeightPx()) / 2).coerceAtLeast(0)
+        params.y = centeredY + dp(displayPreferences.verticalOffsetDp())
         params.width = WindowManager.LayoutParams.WRAP_CONTENT
-        params.height = dp(profile.statusBarTextHeightDp)
+        params.height = overlayHeightPx()
         if (::root.isInitialized && root.isAttachedToWindow) {
             windowManager.updateViewLayout(root, params)
         }
@@ -210,7 +222,7 @@ class IslandOverlayService : Service() {
         }
         if (snapshots.isEmpty()) {
             row.addView(providerIcon(null), linearParams(dp(17), dp(17)))
-            row.addView(statusText(" 请先配置 API", configuredTextColor))
+            row.addView(statusText(strings.getString(R.string.configure_api), configuredTextColor))
         } else {
             val snapshot = snapshots[visibleAccountIndex]
             val textColor = when (snapshot.status) {
@@ -224,7 +236,7 @@ class IslandOverlayService : Service() {
                 row.addView(statusText("［${snapshot.accountDisplayLabel}］", textColor, 10.5f))
             }
             row.addView(statusText(" ${snapshot.primaryText}", textColor, 11.5f).apply {
-                maxWidth = dp(profile.statusBarMaxWidthDp)
+                maxWidth = dp(STATUS_BAR_MAX_WIDTH_DP)
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
             })
@@ -319,8 +331,13 @@ class IslandOverlayService : Service() {
 
     private fun buildNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_launcher)
-        .setContentTitle(getString(R.string.notification_title))
-        .setContentText("每 ${displayPreferences.refreshIntervalMinutes()} 分钟查询一次")
+        .setContentTitle(strings.getString(R.string.notification_title))
+        .setContentText(
+            strings.getString(
+                R.string.notification_refresh_interval,
+                displayPreferences.refreshIntervalMinutes()
+            )
+        )
         .setOngoing(true)
         .setSilent(true)
         .setContentIntent(
@@ -333,7 +350,7 @@ class IslandOverlayService : Service() {
         )
         .addAction(
             0,
-            "停止",
+            strings.getString(R.string.notification_stop),
             PendingIntent.getService(
                 this,
                 1,
@@ -347,7 +364,7 @@ class IslandOverlayService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.notification_channel_name),
+                strings.getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             )
         )
@@ -362,10 +379,50 @@ class IslandOverlayService : Service() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     private fun linearParams(width: Int, height: Int) = LinearLayout.LayoutParams(width, height)
 
+    private fun overlayHeightPx(): Int = dp(STATUS_BAR_TEXT_HEIGHT_DP)
+        .coerceAtMost(statusBarHeightPx().coerceAtLeast(dp(STATUS_BAR_TEXT_HEIGHT_DP)))
+
+    private fun statusBarHeightPx(): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val top = windowManager.currentWindowMetrics.windowInsets
+                .getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top
+            if (top > 0) return top
+        }
+        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId)
+        else dp(FALLBACK_STATUS_BAR_HEIGHT_DP)
+    }
+
+    private fun safeHorizontalInsetPx(alignStart: Boolean): Int {
+        var inset = dp(MIN_SAFE_INSET_DP)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowInsets = windowManager.currentWindowMetrics.windowInsets
+            val cutout = windowInsets.displayCutout
+            inset = maxOf(
+                inset,
+                if (alignStart) cutout?.safeInsetLeft ?: 0 else cutout?.safeInsetRight ?: 0
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val position = if (alignStart) {
+                    RoundedCorner.POSITION_TOP_LEFT
+                } else {
+                    RoundedCorner.POSITION_TOP_RIGHT
+                }
+                inset = maxOf(inset, windowInsets.getRoundedCorner(position)?.radius ?: 0)
+            }
+        }
+        return inset
+    }
+
     companion object {
         private const val CHANNEL_ID = "balance_island_running"
         private const val NOTIFICATION_ID = 1001
         private const val ROTATE_INTERVAL_MS = 5_000L
+        private const val STATUS_BAR_TEXT_HEIGHT_DP = 26
+        private const val STATUS_BAR_MAX_WIDTH_DP = 220
+        private const val FALLBACK_STATUS_BAR_HEIGHT_DP = 28
+        private const val MIN_SAFE_INSET_DP = 16
+        private const val MIN_EDGE_INSET_DP = 4
         const val PREFS_NAME = "overlay_settings"
         const val KEY_Y_OFFSET = "y_offset_dp"
         const val ACTION_STOP = "com.noyorin.balanceisland.STOP_OVERLAY"

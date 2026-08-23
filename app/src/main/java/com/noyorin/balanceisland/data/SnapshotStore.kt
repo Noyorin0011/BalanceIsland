@@ -4,6 +4,7 @@ import android.content.Context
 import org.json.JSONObject
 
 class SnapshotStore(context: Context) {
+    private val appContext = context.applicationContext
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun save(snapshot: BalanceSnapshot) {
@@ -25,7 +26,7 @@ class SnapshotStore(context: Context) {
     fun get(credential: ApiCredential): BalanceSnapshot {
         val raw = prefs.getString(keyFor(credential.id), null)
             ?: legacySnapshot(credential)
-            ?: return BalanceSnapshot.waiting(credential)
+            ?: return BalanceSnapshot.waiting(appContext, credential)
         return runCatching {
             val json = JSONObject(raw)
             BalanceSnapshot(
@@ -45,7 +46,7 @@ class SnapshotStore(context: Context) {
                 status = SnapshotStatus.valueOf(json.getString("status")),
                 updatedAtEpochMillis = json.optLong("updatedAt", 0L)
             )
-        }.getOrElse { BalanceSnapshot.waiting(credential) }
+        }.getOrElse { BalanceSnapshot.waiting(appContext, credential) }
     }
 
     fun remove(credentialId: String) {
