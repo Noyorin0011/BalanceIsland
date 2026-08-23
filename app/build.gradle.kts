@@ -12,8 +12,8 @@ android {
         applicationId = "com.noyorin.balanceisland"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7.0-universal-i18n"
+        versionCode = 8
+        versionName = "0.7.1-openai-key-guidance"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

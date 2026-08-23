@@ -2,7 +2,7 @@
 
 ## 1. 目标
 
-为 Balance Island `0.7.0-universal-i18n` 增加一种或多种目标语言。当前基准语言：
+为 Balance Island `0.7.1-openai-key-guidance` 增加一种或多种目标语言。当前基准语言：
 
 - 简体中文：`app/src/main/res/values/strings.xml`
 - English：`app/src/main/res/values-en/strings.xml`

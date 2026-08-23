@@ -29,6 +29,10 @@
     <string name="hide_key">Hide key</string>
     <string name="show_key">Show key</string>
     <string name="add_and_test">Add and test</string>
+    <string name="api_key_cleanup_help">Before saving, the app removes a leading Bearer label, surrounding text, quotes, and extra whitespace without changing the key itself.</string>
+    <string name="api_key_test_failed_title">API key validation failed</string>
+    <string name="api_key_test_failed">The key still could not be validated after automatic cleanup. Check that the API key is correct, active, and has the required permissions.\n\nAPI response: %1$s</string>
+    <string name="dialog_ok">OK</string>
     <string name="key_security_help">Keys are encrypted with Android Keystore and AES-GCM. Only the note or last four characters are displayed.</string>
     <string name="add_account_first">Add an API account to configure it.</string>
     <string name="alert_rule_help">Orange at balance ≤ alert line ×1.5; red and a notification at balance ≤ alert line. Drop alerts default to every 5 currency units.</string>
@@ -76,7 +80,10 @@
     <string name="color_coral">Coral</string>
     <string name="color_lime">Lime</string>
     <string name="provider_help_deepseek">Reads the account balance directly.</string>
-    <string name="provider_help_openai">Costs requires an Admin Key created by an organization owner.</string>
+    <string name="provider_help_openai">Admin keys query organization costs and limits; project keys are validation-only.</string>
+    <string name="openai_key_notice_title">OpenAI key permissions</string>
+    <string name="openai_key_notice">The common sk-proj- key is a project key. It can call models but cannot read organization-level costs or limits. Automatic queries require an sk-admin- admin key created by an organization owner. With a project key, enter the balance under Alerts and manual balance.</string>
+    <string name="openai_project_key_detected">Project key detected: the app will validate the key but will not query a balance automatically.</string>
     <string name="provider_help_openrouter">The balance endpoint requires a Management Key. Inference keys may return 403.</string>
     <string name="provider_help_siliconflow">Reads the total balance from the official /user/info endpoint.</string>
     <string name="provider_help_moonshot">A regular key is validated only. Enter a manual balance in account settings.</string>

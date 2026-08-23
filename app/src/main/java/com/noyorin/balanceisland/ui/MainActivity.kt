@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -78,6 +79,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noyorin.balanceisland.R
 import com.noyorin.balanceisland.data.AccountBalanceSettings
+import com.noyorin.balanceisland.data.ApiKeySanitizer
 import com.noyorin.balanceisland.data.BalanceRepository
 import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.CredentialSummary
@@ -227,6 +229,26 @@ private fun BalanceIslandScreen(
         }
     }
 
+    LaunchedEffect(state.credentialSaveEvent) {
+        if (state.credentialSaveEvent > 0) {
+            accountLabel = ""
+            apiKey = ""
+        }
+    }
+
+    state.keyCheckError?.let { error ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearKeyCheckError,
+            title = { Text(stringResource(R.string.api_key_test_failed_title)) },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearKeyCheckError) {
+                    Text(stringResource(R.string.dialog_ok))
+                }
+            }
+        )
+    }
+
     LaunchedEffect(state.credentials) {
         val providers = state.credentials.map { it.provider }.toSet()
         val invalidPin = displayMode.provider?.let { it !in providers } ?: false
@@ -303,6 +325,36 @@ private fun BalanceIslandScreen(
                         if (rowProviders.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
+                if (selectedProvider == Provider.OPENAI) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF332817)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.openai_key_notice_title),
+                                color = Color(0xFFFFC46B),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                stringResource(R.string.openai_key_notice),
+                                color = Color(0xFFFFD9A0),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            if (ApiKeySanitizer.clean(apiKey).startsWith("sk-proj-")) {
+                                Text(
+                                    stringResource(R.string.openai_project_key_detected),
+                                    color = Color(0xFFFF9E80),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = accountLabel,
                     onValueChange = { accountLabel = it.take(12) },
@@ -324,6 +376,11 @@ private fun BalanceIslandScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Text(
+                    stringResource(R.string.api_key_cleanup_help),
+                    color = Color(0xFF9CA3AF),
+                    style = MaterialTheme.typography.bodySmall
+                )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = { showKey = !showKey }, modifier = Modifier.weight(1f)) {
                         Text(stringResource(if (showKey) R.string.hide_key else R.string.show_key))
@@ -331,8 +388,6 @@ private fun BalanceIslandScreen(
                     Button(
                         onClick = {
                             viewModel.addCredential(selectedProvider, accountLabel, apiKey)
-                            accountLabel = ""
-                            apiKey = ""
                         },
                         enabled = apiKey.isNotBlank() && !state.refreshing,
                         modifier = Modifier.weight(1f)
