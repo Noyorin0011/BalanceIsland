@@ -8,7 +8,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # The release publishing step must be able to create/update a GitHub Release
+  # and replace its APK asset. Pull requests never run that step.
+  contents: write
 
 concurrency:
   group: android-apk-${{ github.workflow }}-${{ github.ref }}
@@ -93,6 +95,34 @@ jobs:
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish or replace Debug Preview Release APK
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' app/build.gradle.kts | head -n 1)"
+          test -n "$version_name"
+
+          release_tag="v${version_name}-debug"
+          release_asset="$RUNNER_TEMP/BalanceIsland-v${version_name}-debug.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$release_asset"
+
+          if ! gh release view "$release_tag" >/dev/null 2>&1; then
+            gh release create "$release_tag" \
+              --target "$GITHUB_SHA" \
+              --title "Balance Island v$version_name Debug Preview" \
+              --prerelease \
+              --notes "Automated Android debug preview build."
+          fi
+
+          # Keep one authoritative APK in the matching debug-preview release.
+          while IFS= read -r old_asset; do
+            [[ -z "$old_asset" ]] || gh release delete-asset "$release_tag" "$old_asset" --yes
+          done < <(gh release view "$release_tag" --json assets --jq '.assets[].name | select(endswith(".apk"))')
+
+          gh release upload "$release_tag" "$release_asset" --clobber
 
       - name: Remove release keystore
         if: always() && github.event_name != 'pull_request'
