@@ -3,6 +3,7 @@ name: Android APK
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -34,8 +35,17 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
+      - name: Install Android SDK 35
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
       - name: Validate translations
-        run: python3 tools/validate_translations.py app/src/main/res/values/strings.xml app/src/main/res/values-en/strings.xml
+        run: |
+          python3 tools/validate_translations.py app/src/main/res/values/strings.xml app/src/main/res/values-en/strings.xml
+          python3 tools/validate_translations.py app/src/main/res/values-en/strings.xml app/src/main/res/values-ja/strings.xml
+          python3 tools/validate_translations.py app/src/main/res/values-en/strings.xml app/src/main/res/values-b+zh+Hant+TW/strings.xml
+          python3 tools/validate_translations.py app/src/main/res/values-en/strings.xml app/src/main/res/values-ko/strings.xml
 
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace

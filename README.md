@@ -2,7 +2,7 @@
 
 一个原生 Android 应用，用状态栏顶部的透明文字条显示多家 AI API 的余额、预算或 Key 状态。面向 Android 8.0 及以上的大多数手机和平板，不绑定特定品牌或型号。
 
-> 当前交付为可构建源码。生成环境没有 Android SDK，因此未在此处产出 APK；请在 Android Studio 中执行 Gradle Sync 和真机构建。后续测试步骤见 `CODEX_TASK_SPEC.md`。
+> GitHub Actions 会在推送 `main`、提交 PR、手动运行或推送 `v*` 标签时使用 JDK 17 与 Android SDK 35 构建 Debug APK。后续测试步骤见 `CODEX_TASK_SPEC.md`。
 
 ## 已实现
 
@@ -29,7 +29,7 @@
 - 文字条前台服务负责分钟级刷新；服务未运行时由 WorkManager 以系统允许的 15 分钟周期兜底。
 - 控制中心“余额监控”磁贴可一键启动/停止文字条；Android 13+ 可在应用内请求添加。
 - 可选“被回收后自动恢复”：结合 `START_STICKY`、任务移除延迟恢复、开机完成和应用升级广播恢复服务。
-- 内置简体中文和英文，可在应用内选择或跟随系统；界面、文字条与系统通知同步切换。
+- 内置简体中文、繁體中文（台灣）、English、日本語和 한국어，可在应用内选择或跟随系统；界面、文字条与系统通知同步切换。
 
 ## 状态栏示例
 
@@ -91,9 +91,17 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 ## 多语言
 
 - 默认跟随系统语言。
-- 设置页可切换简体中文或 English。
+- 设置页可切换简体中文、繁體中文、English、日本語或 한국어。
+- Android 资源目录分别为默认 `values`、`values-b+zh+Hant+TW`、`values-en`、`values-ja` 与 `values-ko`。
 - Android 13+ 同时声明系统“应用语言”支持；旧版 Android 使用应用内语言配置。
 - 新语言只需在 `app/src/main/res/values-语言代码/strings.xml` 增加同名资源。
+
+## GitHub Actions
+
+- 推送到 `main`、提交 PR、手动运行工作流或推送 `v*` 标签都会触发 Debug APK 构建。
+- 构建使用 JDK 17、Gradle 8.11.1、Android SDK 35，并先校验全部五套语言资源。
+- APK 在对应 Actions 运行页的 `Artifacts` 区域下载，默认保留 14 天。
+- Debug APK 使用 Android 调试签名，仅适合测试和侧载；正式发布需要配置稳定的 Release Keystore 与 GitHub Secrets。
 
 ## 安全说明
 

@@ -2,10 +2,13 @@
 
 ## 1. 目标
 
-为 Balance Island `0.7.1-openai-key-guidance` 增加一种或多种目标语言。当前基准语言：
+为 Balance Island `0.7.1` 增加一种或多种目标语言。当前已有语言：
 
 - 简体中文：`app/src/main/res/values/strings.xml`
 - English：`app/src/main/res/values-en/strings.xml`
+- 日本語：`app/src/main/res/values-ja/strings.xml`
+- 繁體中文（台灣）：`app/src/main/res/values-b+zh+Hant+TW/strings.xml`
+- 한국어：`app/src/main/res/values-ko/strings.xml`
 
 优先以英文文件为翻译源，中文文件用于确认产品含义。必须翻译全部资源，不能只翻译主页面。
 

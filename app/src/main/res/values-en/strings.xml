@@ -53,6 +53,9 @@
     <string name="language_system">System default</string>
     <string name="language_chinese">简体中文</string>
     <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
+    <string name="language_traditional_chinese">繁體中文</string>
+    <string name="language_korean">한국어</string>
     <string name="language_help">The app reloads immediately after a change. System notifications use the selected language too.</string>
     <string name="generic_device_info">Universal Android · automatic safe-area adaptation</string>
     <string name="start_overlay">Start overlay</string>

@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -181,7 +180,7 @@ class MainActivity : ComponentActivity() {
                 mainExecutor
             ) { }
         } else {
-            startActivity(Intent(Settings.ACTION_QUICK_SETTINGS_SETTINGS))
+            startActivity(Intent("android.settings.QUICK_SETTINGS_SETTINGS"))
         }
     }
 }
@@ -914,7 +913,10 @@ private fun AppLanguage.localizedLabel(): String = stringResource(
     when (this) {
         AppLanguage.SYSTEM -> R.string.language_system
         AppLanguage.SIMPLIFIED_CHINESE -> R.string.language_chinese
+        AppLanguage.TRADITIONAL_CHINESE -> R.string.language_traditional_chinese
         AppLanguage.ENGLISH -> R.string.language_english
+        AppLanguage.JAPANESE -> R.string.language_japanese
+        AppLanguage.KOREAN -> R.string.language_korean
     }
 )
 

@@ -53,6 +53,9 @@
     <string name="language_system">跟随系统</string>
     <string name="language_chinese">简体中文</string>
     <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
+    <string name="language_traditional_chinese">繁體中文</string>
+    <string name="language_korean">한국어</string>
     <string name="language_help">切换后应用会立即重新载入；系统通知也会使用所选语言。</string>
     <string name="generic_device_info">通用 Android · 系统安全区自动适配</string>
     <string name="start_overlay">启动文字条</string>

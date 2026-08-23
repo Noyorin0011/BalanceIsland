@@ -2,7 +2,7 @@
 
 ## 当前基线
 
-继续完善现有 Kotlin/Compose Android 工程，不重写架构。当前 `0.7.1-openai-key-guidance` 已实现 8 家服务商、多 Key 加密保存、独立查询缓存、状态栏文字条、分级额度告警、手动余额、控制中心磁贴、后台恢复、OpenAI Project/Admin Key 分流，以及简体中文/英文切换。
+继续完善现有 Kotlin/Compose Android 工程，不重写架构。当前 `0.7.1` 已实现 8 家服务商、多 Key 加密保存、独立查询缓存、状态栏文字条、分级额度告警、手动余额、控制中心磁贴、后台恢复、OpenAI Project/Admin Key 分流，以及简体中文、繁體中文、English、日本語、한국어切换。
 
 显示层只使用 Android 公开的 `TYPE_APPLICATION_OVERLAY`、WindowInsets、DisplayCutout 和 RoundedCorner API。不得加入厂商型号白名单、隐藏 SystemUI 反射或厂商专有卡片 SDK。
 

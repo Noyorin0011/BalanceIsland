@@ -12,7 +12,10 @@ import java.util.Locale
 enum class AppLanguage(val tag: String) {
     SYSTEM(""),
     SIMPLIFIED_CHINESE("zh-Hans-CN"),
-    ENGLISH("en")
+    TRADITIONAL_CHINESE("zh-Hant-TW"),
+    ENGLISH("en"),
+    JAPANESE("ja"),
+    KOREAN("ko")
 }
 
 object AppLanguagePreferences {
@@ -31,8 +34,13 @@ object AppLanguagePreferences {
             val frameworkTag = context.getSystemService(LocaleManager::class.java)
                 .applicationLocales.toLanguageTags()
             when {
+                frameworkTag.startsWith("zh-Hant", ignoreCase = true) ||
+                    frameworkTag.startsWith("zh-TW", ignoreCase = true) ->
+                    AppLanguage.TRADITIONAL_CHINESE
                 frameworkTag.startsWith("zh", ignoreCase = true) -> AppLanguage.SIMPLIFIED_CHINESE
                 frameworkTag.startsWith("en", ignoreCase = true) -> AppLanguage.ENGLISH
+                frameworkTag.startsWith("ja", ignoreCase = true) -> AppLanguage.JAPANESE
+                frameworkTag.startsWith("ko", ignoreCase = true) -> AppLanguage.KOREAN
                 else -> AppLanguage.SYSTEM
             }
         }
