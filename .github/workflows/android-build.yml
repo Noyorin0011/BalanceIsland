@@ -60,3 +60,40 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Prepare release keystore
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/balance-island-release.jks"
+          keytool -list -keystore "$RUNNER_TEMP/balance-island-release.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null
+
+      - name: Build signed release APK
+        if: github.event_name != 'pull_request'
+        env:
+          BALANCE_ISLAND_STORE_FILE: ${{ runner.temp }}/balance-island-release.jks
+          BALANCE_ISLAND_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          BALANCE_ISLAND_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          BALANCE_ISLAND_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Upload signed release APK
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: BalanceIsland-release-${{ github.run_number }}
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove release keystore
+        if: always() && github.event_name != 'pull_request'
+        run: rm -f "$RUNNER_TEMP/balance-island-release.jks"

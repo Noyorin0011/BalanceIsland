@@ -4,6 +4,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val releaseStoreFile = providers.environmentVariable("BALANCE_ISLAND_STORE_FILE").orNull
+val releaseStorePassword = providers.environmentVariable("BALANCE_ISLAND_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("BALANCE_ISLAND_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("BALANCE_ISLAND_KEY_PASSWORD").orNull
+val releaseSigningReady = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.noyorin.balanceisland"
     compileSdk = 35
@@ -19,8 +30,22 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    signingConfigs {
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
