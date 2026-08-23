@@ -2,6 +2,8 @@
 
 一个原生 Android 应用，用状态栏顶部的透明文字条显示多家 AI API 的余额、预算或 Key 状态。面向 Android 8.0 及以上的大多数手机和平板，不绑定特定品牌或型号。
 
+> 当前处于测试预览阶段。GitHub Release 中的 Debug APK 仅用于侧载测试，不代表稳定版，也不保证可从后续正式签名版本直接覆盖升级。
+
 > GitHub Actions 会在推送 `main`、提交 PR、手动运行或推送 `v*` 标签时使用 JDK 17 与 Android SDK 35 构建 APK；安全上下文中还会使用仓库 Secrets 生成正式签名 Release APK。后续测试步骤见 `CODEX_TASK_SPEC.md`。
 
 ## 已实现
@@ -54,7 +56,7 @@ OpenAI Project Key、Kimi/Moonshot、Anthropic、Google Gemini、xAI/Grok 的普
 
 ## 构建
 
-推荐环境：Android Studio、JDK 17、Android SDK 35。
+推荐环境：Android Studio、JDK 17、Android SDK 35。完整的首次配置、命令行构建、APK 输出位置、Release 签名和 GitHub Actions 说明见 [`BUILDING.md`](BUILDING.md)。
 
 1. 用 Android Studio 打开本目录。
 2. 等待 Gradle Sync 完成。
@@ -129,3 +131,7 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - Anthropic Models：<https://docs.anthropic.com/en/api/models-list>
 - Gemini Models：<https://ai.google.dev/api/models>
 - xAI API：<https://docs.x.ai/docs/overview>
+
+## AI 辅助开发声明
+
+项目构想、需求定义与验收由 Noyorin 主导；代码由 GPT-5.6-sol 与 DeepSeek V4-Flash（DSV4F）联合辅助完成。AI 生成或修改的代码仍由项目维护者负责审阅、测试与发布。
