@@ -1,0 +1,43 @@
+package com.noyorin.balanceisland.fluidcloud
+
+import android.content.Context
+import android.os.Bundle
+import com.noyorin.balanceisland.data.BalanceRepository
+import com.noyorin.balanceisland.display.OverlayDisplayPreferences
+import com.oplus.pantanal.seedling.SeedlingCardWidgetProvider
+import com.oplus.pantanal.seedling.bean.SeedlingCard
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Reference only. Compile this file only in the OPPO-approved native flavor,
+ * after adding SeedlingSupportSDK and publishing the matching UPK.
+ */
+class BalanceFluidCloudProvider : SeedlingCardWidgetProvider() {
+    override fun onCardCreate(context: Context, card: SeedlingCard) =
+        publishCached(context, card)
+
+    override fun onUpdateData(context: Context, card: SeedlingCard, data: Bundle) =
+        publishCached(context, card)
+
+    private fun publishCached(context: Context, card: SeedlingCard) {
+        val snapshots = OverlayDisplayPreferences(context)
+            .select(BalanceRepository(context).cached())
+        val snapshot = snapshots.firstOrNull()
+        val businessData = JSONObject().apply {
+            put("providerName", snapshot?.provider?.displayName ?: "API 余额")
+            put("compactValue", snapshot?.primaryText?.take(5) ?: "未配置")
+            put("primaryText", snapshot?.primaryText ?: "等待配置")
+            put("secondaryText", snapshot?.secondaryText ?: "打开应用完成配置")
+            put(
+                "updatedText",
+                snapshot?.updatedAtEpochMillis?.takeIf { it > 0 }?.let {
+                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it))
+                } ?: "尚未更新"
+            )
+        }
+        updateAllCardData(card, businessData, null)
+    }
+}

@@ -1,0 +1,28 @@
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Gradle caches and generated output
+.gradle/
+.gradle-*/
+build/
+**/build/
+
+# Local Android SDK path and signing material
+local.properties
+*.jks
+*.keystore
+keystore.properties
+
+# Native / OS generated files
+.cxx/
+.externalNativeBuild/
+captures/
+.DS_Store
+Thumbs.db
+
+# Runtime secrets and logs
+*.log
+*.data
+.env
+.env.*

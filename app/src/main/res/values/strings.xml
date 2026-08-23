@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">余额浮岛</string>
+    <string name="notification_channel_name">余额浮岛运行状态</string>
+    <string name="notification_title">余额浮岛正在运行</string>
+    <string name="notification_text">点击返回设置；余额会在后台定期更新</string>
+    <string name="quick_settings_tile_label">余额监控</string>
+</resources>
