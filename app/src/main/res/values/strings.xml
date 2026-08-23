@@ -42,7 +42,7 @@
     <string name="background_refresh_help">不同厂商的省电策略可能限制后台定时；请允许后台活动并关闭本应用的电池优化。</string>
     <string name="display_rotation_help">自动模式每 5 秒轮播；点按文字条立即切换账户。</string>
     <string name="horizontal_offset">额外左右偏移：%1$d dp</string>
-    <string name="vertical_offset">上下偏移：%1$d dp</string>
+    <string name="vertical_offset">距屏幕顶部：%1$d dp</string>
     <string name="safe_area_help">圆角安全预设会读取系统的显示缺口与圆角 Insets，并保留最小侧边空间。</string>
     <string name="normal_text_color">正常余额文字颜色</string>
     <string name="warning_color_help">警告状态会自动覆盖颜色：临近线为橙色，越线为红色。</string>

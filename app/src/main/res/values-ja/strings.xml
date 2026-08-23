@@ -42,7 +42,7 @@
     <string name="background_refresh_help">メーカーの省電力ポリシーによりバックグラウンド処理が遅れる場合があります。このアプリのバックグラウンド動作を許可し、バッテリー最適化を無効にしてください。</string>
     <string name="display_rotation_help">自動モードは 5 秒ごとに切り替わります。オーバーレイをタップするとすぐに切り替わります。</string>
     <string name="horizontal_offset">追加の水平オフセット：%1$d dp</string>
-    <string name="vertical_offset">垂直オフセット：%1$d dp</string>
+    <string name="vertical_offset">画面上端からの距離：%1$d dp</string>
     <string name="safe_area_help">安全プリセットはシステムの切り欠きと角丸のインセットを読み取り、最小限の側面余白を確保します。</string>
     <string name="normal_text_color">通常時の残高文字色</string>
     <string name="warning_color_help">警告状態では色が上書きされます：警告ライン付近はオレンジ、警告ラインを下回ると赤です。</string>

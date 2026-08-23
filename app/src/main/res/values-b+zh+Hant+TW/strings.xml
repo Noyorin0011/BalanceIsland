@@ -42,7 +42,7 @@
     <string name="background_refresh_help">各家廠商的省電政策可能延遲背景工作。請允許此應用程式在背景執行，並關閉電池最佳化。</string>
     <string name="display_rotation_help">自動模式每 5 秒輪播；點按文字條可立即切換。</string>
     <string name="horizontal_offset">額外水平偏移：%1$d dp</string>
-    <string name="vertical_offset">垂直偏移：%1$d dp</string>
+    <string name="vertical_offset">距離螢幕頂端：%1$d dp</string>
     <string name="safe_area_help">安全預設會讀取系統的顯示缺口與圓角 Insets，並保留最小側邊留白。</string>
     <string name="normal_text_color">正常餘額文字顏色</string>
     <string name="warning_color_help">警告狀態會覆寫顏色：接近警告線為橘色，低於警告線為紅色。</string>

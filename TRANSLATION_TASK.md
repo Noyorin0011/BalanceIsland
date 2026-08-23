@@ -2,7 +2,7 @@
 
 ## 1. 目标
 
-为 Balance Island `0.7.1` 增加一种或多种目标语言。当前已有语言：
+为 Balance Island `0.7.2` 增加一种或多种目标语言。当前已有语言：
 
 - 简体中文：`app/src/main/res/values/strings.xml`
 - English：`app/src/main/res/values-en/strings.xml`

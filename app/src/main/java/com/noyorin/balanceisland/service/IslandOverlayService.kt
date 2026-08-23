@@ -196,8 +196,7 @@ class IslandOverlayService : Service() {
             dp(MIN_EDGE_INSET_DP)
         }
         params.x = baseHorizontalInset + dp(displayPreferences.horizontalOffsetDp())
-        val centeredY = ((statusBarHeightPx() - overlayHeightPx()) / 2).coerceAtLeast(0)
-        params.y = centeredY + dp(displayPreferences.verticalOffsetDp())
+        params.y = dp(displayPreferences.verticalOffsetDp())
         params.width = WindowManager.LayoutParams.WRAP_CONTENT
         params.height = overlayHeightPx()
         if (::root.isInitialized && root.isAttachedToWindow) {

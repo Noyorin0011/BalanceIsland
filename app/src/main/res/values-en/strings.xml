@@ -42,7 +42,7 @@
     <string name="background_refresh_help">Vendor battery policies may delay background work. Allow background activity and disable battery optimization for this app.</string>
     <string name="display_rotation_help">Auto mode rotates every 5 seconds. Tap the overlay to switch immediately.</string>
     <string name="horizontal_offset">Extra horizontal offset: %1$d dp</string>
-    <string name="vertical_offset">Vertical offset: %1$d dp</string>
+    <string name="vertical_offset">Distance from screen top: %1$d dp</string>
     <string name="safe_area_help">Safe presets read system cutout and rounded-corner insets and keep a minimum side margin.</string>
     <string name="normal_text_color">Normal balance text color</string>
     <string name="warning_color_help">Alert states override the color: orange near the line and red below it.</string>
