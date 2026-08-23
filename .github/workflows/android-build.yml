@@ -64,10 +64,10 @@ jobs:
       - name: Prepare release keystore
         if: github.event_name != 'pull_request'
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           test -n "$KEYSTORE_BASE64"
           test -n "$KEYSTORE_PASSWORD"
@@ -80,9 +80,9 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           BALANCE_ISLAND_STORE_FILE: ${{ runner.temp }}/balance-island-release.jks
-          BALANCE_ISLAND_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          BALANCE_ISLAND_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          BALANCE_ISLAND_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          BALANCE_ISLAND_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BALANCE_ISLAND_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          BALANCE_ISLAND_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle :app:assembleRelease --no-daemon --stacktrace
 
       - name: Upload signed release APK
