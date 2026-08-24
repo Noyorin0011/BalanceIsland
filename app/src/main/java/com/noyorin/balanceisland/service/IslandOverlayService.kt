@@ -177,12 +177,12 @@ class IslandOverlayService : Service() {
             addAction(OverlayDisplayPreferences.ACTION_DISPLAY_SETTINGS_CHANGED)
             addAction(AppLanguagePreferences.ACTION_LANGUAGE_CHANGED)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(updateReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            registerReceiver(updateReceiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            this,
+            updateReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         handler.postDelayed(rotateRunnable, ROTATE_INTERVAL_MS)
         render()
         observeVisibleBalances()
@@ -334,7 +334,9 @@ class IslandOverlayService : Service() {
                 outlined,
                 adaptiveContrast
             ).apply {
-                maxWidth = dp(displayPreferences.contentWidthDp())
+                val contentWidthPx = dp(displayPreferences.contentWidthDp())
+                minWidth = contentWidthPx
+                maxWidth = contentWidthPx
                 setSingleLine(true)
                 ellipsize = TextUtils.TruncateAt.MARQUEE
                 marqueeRepeatLimit = -1
