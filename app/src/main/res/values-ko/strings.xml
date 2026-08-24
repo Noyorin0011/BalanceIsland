@@ -213,4 +213,25 @@
     <string name="experimental_read_success">읽었습니다. BalanceIsland로 돌아가 확인하세요.</string>
     <string name="experimental_read_failed">읽기 실패: %1$s. 인터페이스가 변경되었거나 로그인이 완료되지 않았을 수 있습니다.</string>
     <string name="experimental_disconnected">로그인 세션과 로컬 사용량 기록을 삭제했습니다.</string>
+    <string name="experimental_proxy_enable">이 WebView에 프록시 사용</string>
+    <string name="experimental_proxy_help">인증이 필요 없는 HTTP 프록시만 지원합니다. 프록시는 연결 대상을 볼 수 있고 해당 CA가 설치되어 있으면 세션을 복호화할 수도 있습니다. 신뢰하는 프록시만 사용하세요. 에뮬레이터에서는 보통 10.0.2.2로 컴퓨터에 연결할 수 있습니다.</string>
+    <string name="experimental_proxy_host">프록시 호스트</string>
+    <string name="experimental_proxy_port">포트</string>
+    <string name="experimental_proxy_apply">적용 후 새로고침</string>
+    <string name="experimental_retry">다시 시도</string>
+    <string name="experimental_unknown">알 수 없음</string>
+    <string name="experimental_proxy_unsupported">WebView %1$s은(는) 앱 내 프록시를 지원하지 않습니다. System WebView를 업데이트하거나 에뮬레이터 시스템 프록시를 설정하세요.</string>
+    <string name="experimental_proxy_direct">직접 연결 · WebView %1$s</string>
+    <string name="experimental_proxy_active">프록시 %1$s:%2$d · WebView %3$s</string>
+    <string name="experimental_proxy_apply_failed">프록시를 적용하지 못했으며 페이지 요청에 사용되지 않았습니다.</string>
+    <string name="experimental_proxy_host_empty">프록시 호스트를 입력하세요.</string>
+    <string name="experimental_proxy_host_invalid">프록시 호스트 형식이 잘못되었습니다. 스킴, 경로 또는 계정 정보를 넣지 마세요.</string>
+    <string name="experimental_proxy_port_invalid">프록시 포트는 1~65535 사이여야 합니다.</string>
+    <string name="experimental_web_loading">ChatGPT 불러오는 중…</string>
+    <string name="experimental_web_timeout">로딩 시간이 초과되었습니다. 이 기기에서 프록시에 연결할 수 있는지 확인한 뒤 “다시 시도”를 누르세요.</string>
+    <string name="experimental_non_https_blocked">HTTPS가 아닌 페이지를 차단했습니다.</string>
+    <string name="experimental_web_error">웹 네트워크 오류(%1$d). 네트워크, 프록시 및 DNS를 확인한 뒤 다시 시도하세요.</string>
+    <string name="experimental_web_http_error">페이지가 HTTP %1$d을(를) 반환했습니다. 사이트에서 이 WebView 또는 프록시를 거부했을 수 있습니다.</string>
+    <string name="experimental_web_ssl_error">SSL 인증서 오류를 안전하게 차단했습니다. 이 오류를 우회하지 마세요.</string>
+    <string name="experimental_web_renderer_gone">WebView 렌더러가 종료되었습니다. “다시 시도”를 눌러 페이지를 다시 만드세요.</string>
 </resources>

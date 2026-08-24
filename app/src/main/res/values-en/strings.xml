@@ -213,4 +213,25 @@
     <string name="experimental_read_success">Read successfully. Return to BalanceIsland to view it.</string>
     <string name="experimental_read_failed">Read failed: %1$s. The interface may have changed or sign-in is incomplete.</string>
     <string name="experimental_disconnected">Login session and local usage record cleared.</string>
+    <string name="experimental_proxy_enable">Use a proxy for this WebView</string>
+    <string name="experimental_proxy_help">Only unauthenticated HTTP proxies are supported. A proxy can see connection destinations and, with its CA installed, may decrypt the session. Use only a trusted proxy. Emulators commonly reach the computer at 10.0.2.2.</string>
+    <string name="experimental_proxy_host">Proxy host</string>
+    <string name="experimental_proxy_port">Port</string>
+    <string name="experimental_proxy_apply">Apply &amp; reload</string>
+    <string name="experimental_retry">Retry</string>
+    <string name="experimental_unknown">Unknown</string>
+    <string name="experimental_proxy_unsupported">WebView %1$s does not support an in-app proxy. Update System WebView or configure the emulator system proxy.</string>
+    <string name="experimental_proxy_direct">Direct · WebView %1$s</string>
+    <string name="experimental_proxy_active">Proxy %1$s:%2$d · WebView %3$s</string>
+    <string name="experimental_proxy_apply_failed">Could not apply the proxy. It was not used for the page request.</string>
+    <string name="experimental_proxy_host_empty">Enter a proxy host.</string>
+    <string name="experimental_proxy_host_invalid">Invalid proxy host. Do not include a scheme, path, or account information.</string>
+    <string name="experimental_proxy_port_invalid">Proxy port must be between 1 and 65535.</string>
+    <string name="experimental_web_loading">Loading ChatGPT…</string>
+    <string name="experimental_web_timeout">Loading timed out. Check that the proxy is reachable from this device, then tap “Retry”.</string>
+    <string name="experimental_non_https_blocked">A non-HTTPS page was blocked.</string>
+    <string name="experimental_web_error">Web network error (%1$d). Check the network, proxy, and DNS, then retry.</string>
+    <string name="experimental_web_http_error">The page returned HTTP %1$d. The site may reject this WebView or proxy.</string>
+    <string name="experimental_web_ssl_error">An SSL certificate error was blocked. Do not bypass this error.</string>
+    <string name="experimental_web_renderer_gone">The WebView renderer exited. Tap “Retry” to rebuild the page.</string>
 </resources>

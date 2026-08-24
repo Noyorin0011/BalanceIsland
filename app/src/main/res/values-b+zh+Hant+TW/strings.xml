@@ -213,4 +213,25 @@
     <string name="experimental_read_success">讀取成功。返回 BalanceIsland 即可查看。</string>
     <string name="experimental_read_failed">讀取失敗：%1$s。介面可能已變更，或登入尚未完成。</string>
     <string name="experimental_disconnected">已清除登入工作階段與本機用量記錄。</string>
+    <string name="experimental_proxy_enable">為此 WebView 使用代理伺服器</string>
+    <string name="experimental_proxy_help">僅支援不需驗證的 HTTP 代理伺服器。代理可看到連線目標；安裝代理 CA 後還可能解密工作階段。只使用你信任的代理。模擬器通常可用 10.0.2.2 連到電腦。</string>
+    <string name="experimental_proxy_host">代理主機</string>
+    <string name="experimental_proxy_port">連接埠</string>
+    <string name="experimental_proxy_apply">套用並重新載入</string>
+    <string name="experimental_retry">重試</string>
+    <string name="experimental_unknown">未知</string>
+    <string name="experimental_proxy_unsupported">目前的 WebView %1$s 不支援應用程式內代理；請更新 System WebView 或設定模擬器系統代理。</string>
+    <string name="experimental_proxy_direct">直接連線 · WebView %1$s</string>
+    <string name="experimental_proxy_active">代理 %1$s:%2$d · WebView %3$s</string>
+    <string name="experimental_proxy_apply_failed">無法套用代理，因此網頁要求未使用此設定。</string>
+    <string name="experimental_proxy_host_empty">請輸入代理主機。</string>
+    <string name="experimental_proxy_host_invalid">代理主機格式無效；請勿填入通訊協定、路徑或帳號資訊。</string>
+    <string name="experimental_proxy_port_invalid">代理連接埠必須介於 1–65535。</string>
+    <string name="experimental_web_loading">正在載入 ChatGPT…</string>
+    <string name="experimental_web_timeout">載入逾時。請確認此裝置能連到代理，然後點選「重試」。</string>
+    <string name="experimental_non_https_blocked">已封鎖非 HTTPS 頁面。</string>
+    <string name="experimental_web_error">網頁網路錯誤（%1$d）。請檢查網路、代理與 DNS 後重試。</string>
+    <string name="experimental_web_http_error">網頁傳回 HTTP %1$d。網站可能拒絕目前的 WebView 或代理。</string>
+    <string name="experimental_web_ssl_error">SSL 憑證錯誤，已安全封鎖連線。請勿略過此錯誤。</string>
+    <string name="experimental_web_renderer_gone">WebView 算繪程序已結束。點選「重試」以重建頁面。</string>
 </resources>
