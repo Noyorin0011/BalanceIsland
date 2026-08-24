@@ -89,11 +89,11 @@
     <string name="position_left_edge">왼쪽 위 · 가장자리</string>
     <string name="position_right_edge">오른쪽 위 · 가장자리</string>
     <string name="style_text_only">텍스트만</string>
-    <string name="style_translucent_pill">반투명 알약</string>
+    <string name="style_translucent_pill">초슬림 반투명 배경</string>
     <string name="style_outlined_text">자동 대비 외곽선</string>
-    <string name="style_adaptive_pill">적응형 대비 배경</string>
-    <string name="style_adaptive_text">시스템 밝기 모드 따르기</string>
-    <string name="style_readability_help">시스템 따르기는 라이트 모드에서 어두운 글자, 다크 모드에서 흰 글자를 사용합니다. 일반 Android 오버레이는 다른 앱의 배경 픽셀을 읽을 수 없어 앱별 자동 색상은 지원하지 않습니다. 외곽선에는 마지막 글자 잘림 방지 여백을 추가했으며 적응형 배경이 가장 안정적입니다.</string>
+    <string name="style_adaptive_pill">초슬림 적응형 배경</string>
+    <string name="style_adaptive_text">이중 고대비 텍스트</string>
+    <string name="style_readability_help">이중 고대비 텍스트는 시스템에 맞춘 밝거나 어두운 글자 위에 반대색의 얇은 외곽선을 더해 앱과 시스템 테마가 반대여도 읽을 수 있습니다. 두 배경 스타일은 콘텐츠 위아래에 물리 1픽셀만 추가합니다.</string>
     <string name="color_white">화이트</string>
     <string name="color_mint">민트</string>
     <string name="color_sky">스카이</string>

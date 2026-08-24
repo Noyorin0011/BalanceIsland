@@ -89,11 +89,11 @@
     <string name="position_left_edge">左上・端</string>
     <string name="position_right_edge">右上・端</string>
     <string name="style_text_only">テキストのみ</string>
-    <string name="style_translucent_pill">半透明ピル</string>
+    <string name="style_translucent_pill">極薄半透明背景</string>
     <string name="style_outlined_text">自動コントラスト縁取り</string>
-    <string name="style_adaptive_pill">適応コントラスト背景</string>
-    <string name="style_adaptive_text">システムの明暗に追従する文字</string>
-    <string name="style_readability_help">システム追従文字はライトモードで濃色、ダークモードで白になります。通常の Android オーバーレイは他アプリの背景ピクセルを取得できないため、アプリごとの自動判定は行いません。縁取りには末尾切れ防止の余白を追加済みで、適応背景が最も安定します。</string>
+    <string name="style_adaptive_pill">極薄適応背景</string>
+    <string name="style_adaptive_text">二層ハイコントラスト文字</string>
+    <string name="style_readability_help">二層ハイコントラスト文字はシステムに合わせた明暗色に反対色の細い縁取りを重ねるため、アプリとシステムのテーマが逆でも読み取れます。2 つの背景スタイルは内容の上下に物理 1 ピクセルだけ追加します。</string>
     <string name="color_white">ホワイト</string>
     <string name="color_mint">ミント</string>
     <string name="color_sky">スカイ</string>

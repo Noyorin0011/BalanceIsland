@@ -2,7 +2,7 @@
 
 ## 当前基线
 
-继续完善现有 Kotlin/Compose Android 工程，不重写架构。当前 `0.8.3` 已实现 9 家服务商、多 Key 加密保存、每账户刷新间隔、HTTP 429 `Retry-After`/指数退避、查询串行与防抖、独立查询缓存、状态栏文字条、自动/固定/自定义 Provider 分组轮播、可调文字宽度与长文字平滑滚动、分级额度告警、异常变动报警、无变化自动隐藏与静默恢复提醒、手动余额、控制中心磁贴、后台恢复、OpenAI Project/Admin Key 分流、Xiaomi MiMo 普通 Key 校验、Google Gemini `AQ.`/`AIza` Key 原生校验，以及简体中文、繁體中文、English、日本語、한국어切换。
+继续完善现有 Kotlin/Compose Android 工程，不重写架构。当前 `0.8.4` 已实现 9 家服务商、多 Key 加密保存、每账户刷新间隔、HTTP 429 `Retry-After`/指数退避、查询串行与防抖、独立查询缓存、状态栏文字条、自动/固定/自定义 Provider 分组轮播、可调文字宽度与长文字平滑滚动、双层高对比文字、超薄背景样式、分级额度告警、异常变动报警、无变化自动隐藏与静默恢复提醒、手动余额、控制中心磁贴、后台恢复、OpenAI Project/Admin Key 分流、Xiaomi MiMo 普通 Key 校验、Google Gemini `AQ.`/`AIza` Key 原生校验，以及简体中文、繁體中文、English、日本語、한국어切换。
 
 显示层只使用 Android 公开的 `TYPE_APPLICATION_OVERLAY`、WindowInsets、DisplayCutout 和 RoundedCorner API。不得加入厂商型号白名单、隐藏 SystemUI 反射或厂商专有卡片 SDK。
 

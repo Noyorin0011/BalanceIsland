@@ -89,11 +89,11 @@
     <string name="position_left_edge">左上·贴边</string>
     <string name="position_right_edge">右上·贴边</string>
     <string name="style_text_only">透明文字</string>
-    <string name="style_translucent_pill">半透明底</string>
+    <string name="style_translucent_pill">超薄半透明底</string>
     <string name="style_outlined_text">自动对比描边</string>
-    <string name="style_adaptive_pill">自适应对比底色</string>
-    <string name="style_adaptive_text">跟随系统明暗文字</string>
-    <string name="style_readability_help">跟随系统模式会在浅色系统用深色文字、深色系统用白色文字；Android 不允许普通悬浮窗读取其他应用的背景像素，因此它不会逐应用取色。描边已增加绘制留白，避免末字裁切；自适应底色在任何页面更稳定。</string>
+    <string name="style_adaptive_pill">超薄自适应底色</string>
+    <string name="style_adaptive_text">双层高对比文字</string>
+    <string name="style_readability_help">双层高对比文字会跟随系统选择深/浅字色，并自动叠加相反颜色的细轮廓，因此应用主题与系统相反时仍可辨认。两个带背景样式仅比内容上下各多 1 个物理像素。</string>
     <string name="color_white">白色</string>
     <string name="color_mint">薄荷</string>
     <string name="color_sky">天蓝</string>

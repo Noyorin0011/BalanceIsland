@@ -89,11 +89,11 @@
     <string name="position_left_edge">Top left · edge</string>
     <string name="position_right_edge">Top right · edge</string>
     <string name="style_text_only">Text only</string>
-    <string name="style_translucent_pill">Translucent pill</string>
+    <string name="style_translucent_pill">Ultra-thin translucent background</string>
     <string name="style_outlined_text">Automatic contrast outline</string>
-    <string name="style_adaptive_pill">Adaptive contrast background</string>
-    <string name="style_adaptive_text">Follow system light/dark text</string>
-    <string name="style_readability_help">System-following text is dark in light mode and white in dark mode. Android does not let a normal overlay sample another app’s pixels, so it cannot adapt per app. The outline now has extra draw inset to prevent final-glyph clipping; the adaptive background remains the most reliable option.</string>
+    <string name="style_adaptive_pill">Ultra-thin adaptive background</string>
+    <string name="style_adaptive_text">Dual-tone high-contrast text</string>
+    <string name="style_readability_help">Dual-tone text follows the system for its light/dark fill and adds a thin opposite-color outline, so it remains legible when an app uses the opposite theme. Both background styles add only one physical pixel above and below their content.</string>
     <string name="color_white">White</string>
     <string name="color_mint">Mint</string>
     <string name="color_sky">Sky</string>

@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -1067,13 +1068,22 @@ private fun StatusBarPreview(
         StatusBarVisualStyle.OUTLINED_TEXT,
         StatusBarVisualStyle.ADAPTIVE_TEXT -> Color.Transparent
     }
-    val previewShadow = if (visualStyle == StatusBarVisualStyle.OUTLINED_TEXT) {
-        Shadow(
+    val previewShadow = when (visualStyle) {
+        StatusBarVisualStyle.OUTLINED_TEXT -> Shadow(
             color = Color(StatusBarContrast.outlineColorFor(displayColor.toArgb())),
             offset = Offset.Zero,
             blurRadius = 2.7f
         )
-    } else null
+        StatusBarVisualStyle.ADAPTIVE_TEXT -> Shadow(
+            color = Color(StatusBarContrast.outlineColorFor(displayColor.toArgb())),
+            offset = Offset.Zero,
+            blurRadius = 2.0f
+        )
+        else -> null
+    }
+    val onePhysicalPixel = with(LocalDensity.current) { 1f.toDp() }
+    val hasBackground = visualStyle == StatusBarVisualStyle.TRANSLUCENT_PILL ||
+        visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL
 
     Box(
         modifier = Modifier
@@ -1086,18 +1096,20 @@ private fun StatusBarPreview(
             modifier = Modifier
                 .background(
                     previewBackground,
-                    RoundedCornerShape(
-                        if (visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL) 6.dp else 14.dp
-                    )
+                    RoundedCornerShape(if (hasBackground) 4.dp else 0.dp)
                 )
                 .padding(
-                    horizontal = if (visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL) 4.dp else 6.dp,
-                    vertical = if (visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL) 1.dp else 3.dp
+                    horizontal = if (hasBackground) 3.dp else 0.dp,
+                    vertical = if (hasBackground) onePhysicalPixel else 0.dp
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (snapshot != null) ProviderLogo(snapshot.provider, 18)
-            else Box(Modifier.size(18.dp).background(Color(0xFFFFBE46), CircleShape))
+            if (snapshot != null) ProviderLogo(snapshot.provider, if (hasBackground) 15 else 18)
+            else Box(
+                Modifier
+                    .size(if (hasBackground) 15.dp else 18.dp)
+                    .background(Color(0xFFFFBE46), CircleShape)
+            )
             Text(
                 if (snapshot == null) {
                     stringResource(R.string.configure_api)
