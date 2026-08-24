@@ -134,6 +134,11 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - Gemini Models：<https://ai.google.dev/api/models>
 - xAI API：<https://docs.x.ai/docs/overview>
 
+## 后续规划（TODO）
+
+- [ ] **自动隐藏与静默提醒**：长时间无余额变动时自动隐藏状态栏文字条；发生变动时自动重新显示，并仅在通知栏以图标静默提示（无横幅弹窗）。
+- [ ] **API Key 异常变动报警**：监测各 API Key 余额/用量的异常变动，阈值可配置；触发时发送提醒消息。
+
 ## AI 辅助开发声明
 
 项目构想、需求定义与验收由 Noyorin 主导；代码由 GPT-5.6-sol 与 DeepSeek V4-Flash（DSV4F）联合辅助完成。AI 生成或修改的代码仍由项目维护者负责审阅、测试与发布。
