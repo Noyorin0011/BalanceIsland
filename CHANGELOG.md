@@ -2,6 +2,20 @@
 
 Balance Island 的版本变化统一记录在本文件中，新版本排列在前。
 
+## 0.8.1
+
+### 修复
+
+- Google Gemini 兼容 Google AI Studio 新版 `AQ.` Authorization Key，同时保留旧版 `AIza` Standard Key。
+- Gemini Key 清洗器可从带说明文字、引号或 `Bearer` 包装的内容中正确提取 `AQ.` Key。
+- Gemini 校验改用原生 `GET /v1beta/models` 与 `x-goog-api-key` 请求头，不再依赖 OpenAI 兼容层。
+
+### 文案
+
+- Gemini 输入提示更新为 `AQ... / AIza...`。
+- 明确免费层与后付费账户没有固定“剩余余额”，无需强制设置手动余额；预付费用户可从 Google AI Studio“用量和限制”页面抄入可用余额。
+- 同步更新简体中文、繁體中文（台灣）、English、日本語和 한국어说明，资源键数量保持一致。
+
 ## 0.8.0
 
 ### 新增

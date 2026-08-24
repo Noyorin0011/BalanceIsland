@@ -35,7 +35,7 @@ enum class Provider(
         "Anthropic", "USD", "Anthropic API Key", "sk-ant-...", BalanceCapability.KEY_CHECK_ONLY
     ),
     GEMINI(
-        "Google Gemini", "USD", "Gemini API Key", "AIza...", BalanceCapability.KEY_CHECK_ONLY
+        "Google Gemini", "USD", "Gemini API Key", "AQ... / AIza...", BalanceCapability.KEY_CHECK_ONLY
     ),
     XAI(
         "xAI / Grok", "USD", "xAI API Key", "xai-...", BalanceCapability.KEY_CHECK_ONLY

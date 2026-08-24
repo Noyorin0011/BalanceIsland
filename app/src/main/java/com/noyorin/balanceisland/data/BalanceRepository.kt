@@ -61,10 +61,7 @@ class BalanceRepository(private val context: Context) {
                 Provider.MOONSHOT -> fetchMoonshot(credential)
                 Provider.MIMO -> verifyMiMoKey(credential)
                 Provider.ANTHROPIC -> verifyAnthropicKey(credential)
-                Provider.GEMINI -> verifyBearerKey(
-                    credential,
-                    "https://generativelanguage.googleapis.com/v1beta/openai/models"
-                )
+                Provider.GEMINI -> verifyGeminiKey(credential)
                 Provider.XAI -> verifyBearerKey(credential, "https://api.x.ai/v1/models")
             }
         }.getOrElse { throwable ->
@@ -324,6 +321,14 @@ class BalanceRepository(private val context: Context) {
                 "x-api-key" to credential.apiKey,
                 "anthropic-version" to "2023-06-01"
             )
+        )
+        return verifiedKeySnapshot(credential)
+    }
+
+    private fun verifyGeminiKey(credential: ApiCredential): BalanceSnapshot {
+        getJson(
+            url = "https://generativelanguage.googleapis.com/v1beta/models",
+            headers = mapOf("x-goog-api-key" to credential.apiKey)
         )
         return verifiedKeySnapshot(credential)
     }

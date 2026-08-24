@@ -102,7 +102,7 @@
     <string name="provider_help_moonshot">普通 Key 可直接读取余额；自动兼容国内站人民币和国际站美元。</string>
     <string name="provider_help_mimo">普通按量 sk- Key 通过官方模型列表验证；没有公开余额接口，请设置手动余额。不支持 Token Plan 的 tp- Key。</string>
     <string name="provider_help_anthropic">普通 Key 不提供剩余余额；验证后可设置手动余额。</string>
-    <string name="provider_help_gemini">Google AI Studio Key 不提供剩余余额；验证后可设置手动余额。</string>
+    <string name="provider_help_gemini">支持新版 AQ. 与旧版 AIza Key。免费层和后付费没有固定剩余余额，可留空并仅显示 Key 有效；预付费可从 AI Studio 的“用量和限制”抄入可用余额。</string>
     <string name="provider_help_xai">普通 Key 不提供剩余余额；验证后可设置手动余额。</string>
     <string name="message_key_empty">API Key 不能为空</string>
     <string name="message_save_failed">保存失败</string>

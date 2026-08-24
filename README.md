@@ -35,7 +35,7 @@
 - OpenAI：`sk-admin-` 调用 `GET /v1/organization/costs`，并在可用时读取 `GET /v1/organization/spend_limit`；`sk-proj-` 与普通 Key 仅通过 `GET /v1/models` 校验，余额使用手动设置。
 - Xiaomi MiMo：普通按量 `sk-` Key 通过官方 `GET /v1/models` 和 `api-key` 请求头校验；官方未公开余额查询接口，余额使用手动设置。Token Plan 的 `tp-` Key 不在本应用中调用。
 - Android Keystore + AES-GCM 分账户加密保存 API Key，设置页只显示备注/后四位。
-- 粘贴 Key 时会自动提取 `sk-`、`AIza` 或 `xai-` 凭据，去除前置 `Bearer`、说明文字、引号和空白；验证仍失败时弹窗显示接口错误并提示检查 Key。
+- 粘贴 Key 时会自动提取 `sk-`、`AQ.`、`AIza` 或 `xai-` 凭据，去除前置 `Bearer`、说明文字、引号和空白；验证仍失败时弹窗显示接口错误并提示检查 Key。
 - 自动迁移上一版保存的单个 DeepSeek/OpenAI Key。
 - 文字条前台服务负责分钟级刷新；服务未运行时由 WorkManager 以系统允许的 15 分钟周期兜底。
 - 控制中心“余额监控”磁贴可一键启动/停止文字条；Android 13+ 可在应用内请求添加。
@@ -61,7 +61,9 @@ DeepSeek、OpenRouter、SiliconFlow 和 Kimi/Moonshot 显示官方接口返回/�
 
 若组织没有可读取的硬消费上限，只显示本月累计消费。OpenAI 组织消费查询需要 Organization Owner 创建的 Admin API Key。配置页会常驻提示这一权限差异；检测到 `sk-proj-` 时只校验模型访问，不再错误调用组织账单接口，并提示填写手动余额。Admin Key 同时会读取当天组织 Cost。
 
-OpenAI Project Key、Xiaomi MiMo、Anthropic、Google Gemini、xAI/Grok 的普通 Key 当前只做官方模型接口验证；这些平台没有向普通 Key 提供统一剩余余额时，需在“额度警告与手动余额”填写余额。应用不会把 token 用量伪装成余额。
+OpenAI Project Key、Xiaomi MiMo、Anthropic、Google Gemini、xAI/Grok 的普通 Key 当前只做官方模型接口验证。应用不会把 token 用量伪装成余额。
+
+Google Gemini 同时支持 Google AI Studio 新版 `AQ.` Authorization Key 与旧版 `AIza` Standard Key，通过原生 `GET https://generativelanguage.googleapis.com/v1beta/models` 和 `x-goog-api-key` 请求头验证。免费层只有请求/token 配额、没有金额余额；后付费账户只有累计费用、没有固定剩余额度，这两类账户可不填写手动余额并仅显示 Key 有效。预付费用户可在 Google AI Studio 的 `Dashboard → Usage and Limits` 查看 `Available credit` 后手动填入；Gemini Key 本身不能读取 Cloud Billing 余额。
 
 对于仅提供余额、不提供日账单接口的服务商，应用在本机保存当天最早余额、最后余额与识别到的充值增长，以余额下降估算今日消费。该数值从首次启用统计开始，跨零点恢复或长时间停机时仍属于近似值，因此界面明确标为“今日约用”。
 
@@ -148,6 +150,8 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - SiliconFlow `/user/info` 变更说明：<https://docs.siliconflow.cn/cn/release-notes/overview>
 - Anthropic Models：<https://docs.anthropic.com/en/api/models-list>
 - Gemini Models：<https://ai.google.dev/api/models>
+- Gemini API Key 类型：<https://ai.google.dev/gemini-api/docs/api-key>
+- Gemini API 计费：<https://ai.google.dev/gemini-api/docs/billing>
 - xAI API：<https://docs.x.ai/docs/overview>
 - Xiaomi MiMo List Models：<https://mimo.mi.com/docs/zh-CN/api/model/list-models>
 - Xiaomi MiMo API Key 类型：<https://mimo.mi.com/docs/en-US/quick-start/faq/api-integration>

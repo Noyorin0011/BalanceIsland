@@ -102,7 +102,7 @@
     <string name="provider_help_moonshot">A standard key reads the balance directly; Chinese CNY and international USD endpoints are detected automatically.</string>
     <string name="provider_help_mimo">A pay-as-you-go sk- key is validated with the official model list. No public balance endpoint is available, so set a manual balance. tp- Token Plan keys are not supported.</string>
     <string name="provider_help_anthropic">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
-    <string name="provider_help_gemini">Google AI Studio keys do not expose remaining balance. A manual balance can be set after validation.</string>
+    <string name="provider_help_gemini">Supports new AQ. and legacy AIza keys. Free and postpaid plans have no fixed remaining balance, so leave manual balance empty and show key validity only. Prepaid users can copy available credit from AI Studio Usage and Limits.</string>
     <string name="provider_help_xai">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
     <string name="message_key_empty">API key cannot be empty</string>
     <string name="message_save_failed">Save failed</string>
