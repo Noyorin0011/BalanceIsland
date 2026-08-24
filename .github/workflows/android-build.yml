@@ -87,6 +87,21 @@ jobs:
           BALANCE_ISLAND_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle :app:assembleRelease --no-daemon --stacktrace
 
+      - name: Verify release signature
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          apk="app/build/outputs/apk/release/app-release.apk"
+          apksigner="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/35.0.0/apksigner"
+          test -f "$apk"
+          test -x "$apksigner"
+          certificate="$($apksigner verify --verbose --print-certs "$apk")"
+          printf '%s\n' "$certificate"
+          if grep -qi "CN=Android Debug" <<<"$certificate"; then
+            echo "Refusing to publish an APK signed with the Android debug certificate." >&2
+            exit 1
+          fi
+
       - name: Upload signed release APK
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
@@ -124,6 +139,11 @@ jobs:
                 --latest \
                 --notes "Automated signed Android release build."
             fi
+          elif [[ -f "$release_notes" ]]; then
+            gh release edit "$release_tag" \
+              --title "Balance Island v$version_name" \
+              --latest \
+              --notes-file "$release_notes"
           fi
 
           # Keep one authoritative signed APK in the matching release.

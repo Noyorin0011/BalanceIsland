@@ -1,7 +1,5 @@
 # Balance Island 0.7.4
 
-> Debug Preview / Pre-release，用于真机验证余额接口与后台恢复行为。
-
 - 修复 Kimi/Moonshot 被错误归类为“仅验证 Key”的问题，普通 Key 现在直接查询可用、现金与代金券余额。
 - 自动兼容 Moonshot 国内人民币端点与国际美元端点。
 - OpenRouter Management Key 读取各 Key 的官方 `usage_daily` 并与账户余额组合显示。

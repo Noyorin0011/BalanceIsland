@@ -1,6 +1,7 @@
 package com.noyorin.balanceisland.ui
 
 import android.Manifest
+import android.app.Activity
 import android.app.StatusBarManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -55,8 +57,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +74,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +83,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noyorin.balanceisland.R
 import com.noyorin.balanceisland.data.AccountBalanceSettings
@@ -266,7 +272,7 @@ private fun BalanceIslandScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = Color(0xFF10131A)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -279,7 +285,7 @@ private fun BalanceIslandScreen(
             Text(stringResource(R.string.screen_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(
                 stringResource(R.string.screen_subtitle),
-                color = Color(0xFFAAB0BC),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -287,7 +293,7 @@ private fun BalanceIslandScreen(
 
             ExpandableSection(stringResource(R.string.section_account_status), initiallyExpanded = true) {
                 if (state.snapshots.isEmpty()) {
-                    Text(stringResource(R.string.no_accounts), color = Color(0xFFAAB0BC))
+                    Text(stringResource(R.string.no_accounts), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     state.snapshots.forEach { SnapshotRow(it) }
                 }
@@ -300,7 +306,7 @@ private fun BalanceIslandScreen(
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                         Spacer(Modifier.size(10.dp))
                     }
@@ -311,7 +317,7 @@ private fun BalanceIslandScreen(
             ExpandableSection(stringResource(R.string.section_api_accounts), initiallyExpanded = true) {
                 Text(
                     stringResource(R.string.multi_key_help),
-                    color = Color(0xFFAAB0BC),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Provider.entries.toList().chunked(2).forEach { rowProviders ->
@@ -333,7 +339,9 @@ private fun BalanceIslandScreen(
                 }
                 if (selectedProvider == Provider.OPENAI) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF332817)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -342,18 +350,18 @@ private fun BalanceIslandScreen(
                         ) {
                             Text(
                                 stringResource(R.string.openai_key_notice_title),
-                                color = Color(0xFFFFC46B),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
                                 stringResource(R.string.openai_key_notice),
-                                color = Color(0xFFFFD9A0),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.82f),
                                 style = MaterialTheme.typography.bodySmall
                             )
                             if (ApiKeySanitizer.clean(apiKey).startsWith("sk-proj-")) {
                                 Text(
                                     stringResource(R.string.openai_project_key_detected),
-                                    color = Color(0xFFFF9E80),
+                                    color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -384,7 +392,7 @@ private fun BalanceIslandScreen(
                 )
                 Text(
                     stringResource(R.string.api_key_cleanup_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -402,14 +410,14 @@ private fun BalanceIslandScreen(
                 state.credentials.forEach { CredentialRow(it, viewModel::removeCredential) }
                 Text(
                     stringResource(R.string.key_security_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
             ExpandableSection(stringResource(R.string.section_alerts)) {
                 if (state.credentials.isEmpty()) {
-                    Text(stringResource(R.string.add_account_first), color = Color(0xFFAAB0BC))
+                    Text(stringResource(R.string.add_account_first), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 state.credentials.forEach { summary ->
                     AccountAlertEditor(
@@ -421,7 +429,7 @@ private fun BalanceIslandScreen(
                 }
                 Text(
                     stringResource(R.string.alert_rule_help),
-                    color = Color(0xFFFFB45C),
+                    color = MaterialTheme.colorScheme.tertiary,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -446,7 +454,7 @@ private fun BalanceIslandScreen(
                 ) { Text(stringResource(R.string.save_refresh_interval)) }
                 Text(
                     stringResource(R.string.background_refresh_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -468,7 +476,7 @@ private fun BalanceIslandScreen(
                 }
                 Text(
                     stringResource(R.string.display_rotation_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -487,7 +495,7 @@ private fun BalanceIslandScreen(
                 }
                 Text(
                     stringResource(R.string.content_mode_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -524,7 +532,7 @@ private fun BalanceIslandScreen(
                 )
                 Text(
                     stringResource(R.string.safe_area_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -558,12 +566,12 @@ private fun BalanceIslandScreen(
                 }
                 Text(
                     stringResource(R.string.warning_color_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
                     stringResource(R.string.style_readability_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -577,7 +585,7 @@ private fun BalanceIslandScreen(
                         Text(stringResource(R.string.auto_restart), fontWeight = FontWeight.SemiBold)
                         Text(
                             stringResource(R.string.auto_restart_help),
-                            color = Color(0xFF9CA3AF),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -595,7 +603,7 @@ private fun BalanceIslandScreen(
                 ) { Text(stringResource(R.string.add_quick_tile)) }
                 Text(
                     stringResource(R.string.quick_tile_help),
-                    color = Color(0xFFFFB45C),
+                    color = MaterialTheme.colorScheme.tertiary,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -614,7 +622,7 @@ private fun BalanceIslandScreen(
                 }
                 Text(
                     stringResource(R.string.language_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -622,7 +630,7 @@ private fun BalanceIslandScreen(
             ExpandableSection(stringResource(R.string.section_run), initiallyExpanded = true) {
                 Text(
                     stringResource(R.string.generic_device_info),
-                    color = Color(0xFF73E0C1),
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -631,7 +639,7 @@ private fun BalanceIslandScreen(
                 }
                 Text(
                     stringResource(R.string.permission_help),
-                    color = Color(0xFF9CA3AF),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -651,7 +659,7 @@ private fun ExpandableSection(
     Card(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF191D26))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column {
             Row(
@@ -667,7 +675,10 @@ private fun ExpandableSection(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(if (expanded) "▾" else "▸", color = Color(0xFF9CA3AF))
+                Text(
+                    if (expanded) "▾" else "▸",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (expanded) {
                 Column(
@@ -696,7 +707,7 @@ private fun AccountAlertEditor(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF11141B), RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
             .padding(13.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -792,7 +803,7 @@ private fun StatusBarPreview(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF080A0F), RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
             .padding(14.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -826,16 +837,22 @@ private fun CredentialRow(summary: CredentialSummary, remove: (String) -> Unit) 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF11141B), RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(14.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         ProviderLogo(summary.provider, 30)
         Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text("${summary.provider.displayName} · ${summary.displayLabel}", fontWeight = FontWeight.SemiBold)
-            Text(stringResource(R.string.key_suffix, summary.keySuffix), color = Color(0xFF7E8592), style = MaterialTheme.typography.labelSmall)
+            Text(
+                stringResource(R.string.key_suffix, summary.keySuffix),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
         }
-        TextButton(onClick = { remove(summary.id) }) { Text(stringResource(R.string.delete), color = Color(0xFFFF7A86)) }
+        TextButton(onClick = { remove(summary.id) }) {
+            Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+        }
     }
 }
 
@@ -844,7 +861,7 @@ private fun SnapshotRow(snapshot: BalanceSnapshot) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF11141B), RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
             .padding(13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -855,7 +872,11 @@ private fun SnapshotRow(snapshot: BalanceSnapshot) {
                 color = snapshotTextColor(snapshot),
                 fontWeight = FontWeight.SemiBold
             )
-            Text(snapshot.secondaryText, color = Color(0xFF9CA3AF), style = MaterialTheme.typography.bodySmall)
+            Text(
+                snapshot.secondaryText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall
+            )
             snapshot.todayUsedAmount?.let { amount ->
                 Text(
                     stringResource(
@@ -866,7 +887,7 @@ private fun SnapshotRow(snapshot: BalanceSnapshot) {
                         },
                         BalanceTextFormatter.amount(snapshot.currencyCode, amount)
                     ),
-                    color = Color(0xFF7FCAFF),
+                    color = MaterialTheme.colorScheme.secondary,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -874,7 +895,7 @@ private fun SnapshotRow(snapshot: BalanceSnapshot) {
                 Text(
                     SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
                         .format(Date(snapshot.updatedAtEpochMillis)),
-                    color = Color(0xFF6F7684),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -926,11 +947,12 @@ private fun decimalInput(value: String): String {
     else filtered.take(firstDot + 1) + filtered.drop(firstDot + 1).replace(".", "").take(2)
 }
 
+@Composable
 private fun snapshotTextColor(snapshot: BalanceSnapshot): Color = when (snapshot.status) {
     SnapshotStatus.WARNING -> Color(0xFFFFA63D)
     SnapshotStatus.CRITICAL -> Color(0xFFFF5260)
     SnapshotStatus.ERROR -> Color(0xFFFF6470)
-    else -> Color(0xFFF1F3F7)
+    else -> MaterialTheme.colorScheme.onSurface
 }
 
 private fun statusColor(status: SnapshotStatus) = when (status) {
@@ -1014,15 +1036,68 @@ private fun providerHelp(provider: Provider): String = stringResource(
 
 @Composable
 private fun BalanceIslandTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
+    val darkTheme = isSystemInDarkTheme()
+    val colorScheme = if (darkTheme) {
+        darkColorScheme(
             primary = Color(0xFF73E0C1),
             onPrimary = Color(0xFF052019),
-            secondary = Color(0xFF68B4FF),
+            primaryContainer = Color(0xFF075142),
+            onPrimaryContainer = Color(0xFF96F8D7),
+            secondary = Color(0xFF7FCAFF),
+            onSecondary = Color(0xFF00344D),
+            tertiary = Color(0xFFFFB95F),
+            onTertiary = Color(0xFF452B00),
+            tertiaryContainer = Color(0xFF3A2D18),
+            onTertiaryContainer = Color(0xFFFFDEA7),
             background = Color(0xFF10131A),
+            onBackground = Color(0xFFF1F3F7),
             surface = Color(0xFF191D26),
-            onSurface = Color(0xFFF1F3F7)
-        ),
+            onSurface = Color(0xFFF1F3F7),
+            surfaceVariant = Color(0xFF11141B),
+            onSurfaceVariant = Color(0xFFAAB0BC),
+            outline = Color(0xFF8B929E),
+            error = Color(0xFFFF7A86),
+            onError = Color(0xFF52000A)
+        )
+    } else {
+        lightColorScheme(
+            primary = Color(0xFF006B56),
+            onPrimary = Color.White,
+            primaryContainer = Color(0xFF8CF8D7),
+            onPrimaryContainer = Color(0xFF002118),
+            secondary = Color(0xFF00658D),
+            onSecondary = Color.White,
+            tertiary = Color(0xFF815500),
+            onTertiary = Color.White,
+            tertiaryContainer = Color(0xFFFFDDB0),
+            onTertiaryContainer = Color(0xFF291800),
+            background = Color(0xFFF7F9FC),
+            onBackground = Color(0xFF181C22),
+            surface = Color.White,
+            onSurface = Color(0xFF181C22),
+            surfaceVariant = Color(0xFFEEF1F5),
+            onSurfaceVariant = Color(0xFF4B5563),
+            outline = Color(0xFF747B86),
+            error = Color(0xFFBA1A1A),
+            onError = Color.White
+        )
+    }
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            @Suppress("DEPRECATION")
+            window.statusBarColor = colorScheme.background.toArgb()
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = colorScheme.background.toArgb()
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
+        }
+    }
+    MaterialTheme(
+        colorScheme = colorScheme,
         content = content
     )
 }
