@@ -334,7 +334,9 @@ class IslandOverlayService : Service() {
                 outlined,
                 adaptiveContrast
             ).apply {
-                maxWidth = dp(displayPreferences.contentWidthDp())
+                val contentWidthPx = dp(displayPreferences.contentWidthDp())
+                minWidth = contentWidthPx
+                maxWidth = contentWidthPx
                 setSingleLine(true)
                 ellipsize = TextUtils.TruncateAt.MARQUEE
                 marqueeRepeatLimit = -1
@@ -731,3 +733,4 @@ class IslandOverlayService : Service() {
         val accountLabel: String
     )
 }
+
