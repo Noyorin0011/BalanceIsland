@@ -6,6 +6,8 @@
 
 > GitHub Actions 会在推送 `main`、提交 PR、手动运行或推送 `v*` 标签时使用 JDK 17 与 Android SDK 35 构建 APK；安全上下文中还会使用仓库 Secrets 生成正式签名 Release APK。后续测试步骤见 `CODEX_TASK_SPEC.md`。
 
+完整版本变化见 [`CHANGELOG.md`](CHANGELOG.md)。
+
 ## 已实现
 
 - Kotlin + Jetpack Compose 设置页，所有功能按可伸缩分类卡片组织。
@@ -109,7 +111,7 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - 构建使用 JDK 17、Gradle 8.11.1、Android SDK 35，并先校验全部五套语言资源。
 - 非 PR 构建会读取 `ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`，额外生成正式签名 Release APK；PR 不接触这些 Secrets。
 - APK 在对应 Actions 运行页的 `Artifacts` 区域下载：Debug 默认保留 14 天，签名 Release 默认保留 30 天。
-- 非 PR 构建成功后还会更新与当前 `versionName` 对应的 Debug Preview Release（例如 `v0.7.4-debug`）：删除其中旧 APK，并上传本次新构建的 `BalanceIsland-v<version>-debug.apk`。
+- 非 PR 构建成功后会创建或更新与当前 `versionName` 对应的正式 Release（例如 `v0.7.5`），从 `CHANGELOG.md` 自动截取该版本说明，并上传通过证书检查的 `BalanceIsland-v<version>.apk`。
 - Debug APK 只适合测试；对外发布和覆盖升级应始终使用同一套 Release Keystore 签名的 APK。
 
 ## 安全说明

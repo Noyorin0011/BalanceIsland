@@ -122,8 +122,18 @@ jobs:
 
           release_tag="v${version_name}"
           release_asset="$RUNNER_TEMP/BalanceIsland-v${version_name}.apk"
-          release_notes="RELEASE_NOTES_${version_name}.md"
+          release_notes="$RUNNER_TEMP/BalanceIsland-v${version_name}-notes.md"
           cp app/build/outputs/apk/release/app-release.apk "$release_asset"
+
+          if [[ -f "CHANGELOG.md" ]]; then
+            awk -v version="$version_name" '
+              BEGIN { target = "## " version }
+              $0 == target { capture = 1 }
+              capture && $0 ~ /^## / && $0 != target { exit }
+              capture { print }
+            ' CHANGELOG.md > "$release_notes"
+          fi
+          [[ -s "$release_notes" ]] || rm -f "$release_notes"
 
           if ! gh release view "$release_tag" >/dev/null 2>&1; then
             if [[ -f "$release_notes" ]]; then
