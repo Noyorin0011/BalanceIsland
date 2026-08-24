@@ -36,7 +36,8 @@ enum class StatusBarVisualStyle {
     TEXT_ONLY,
     TRANSLUCENT_PILL,
     OUTLINED_TEXT,
-    ADAPTIVE_PILL
+    ADAPTIVE_PILL,
+    ADAPTIVE_TEXT
 }
 
 enum class BalanceContentMode {
@@ -76,6 +77,9 @@ object BalanceTextFormatter {
 
 /** Contrast helpers shared by the settings preview and the real overlay. */
 object StatusBarContrast {
+    fun textColorForNightMode(isNightMode: Boolean): Int =
+        if (isNightMode) 0xFFFFFFFF.toInt() else 0xFF111318.toInt()
+
     fun isLight(argb: Int): Boolean {
         val red = ColorChannel.red(argb) / 255.0
         val green = ColorChannel.green(argb) / 255.0

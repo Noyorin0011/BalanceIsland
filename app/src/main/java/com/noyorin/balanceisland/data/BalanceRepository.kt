@@ -19,6 +19,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.ceil
 
 class BalanceRepository(private val context: Context) {
     private val strings get() = AppLanguagePreferences.wrap(context)
@@ -132,8 +133,9 @@ class BalanceRepository(private val context: Context) {
         credential: ApiCredential,
         retryAtEpochMillis: Long
     ): BalanceSnapshot {
-        val remainingMinutes = ((retryAtEpochMillis - System.currentTimeMillis()) / 60_000.0)
-            .let(kotlin.math::ceil)
+        val remainingMinutes = ceil(
+            (retryAtEpochMillis - System.currentTimeMillis()) / 60_000.0
+        )
             .toInt()
             .coerceAtLeast(1)
         val cached = snapshots.get(credential)
