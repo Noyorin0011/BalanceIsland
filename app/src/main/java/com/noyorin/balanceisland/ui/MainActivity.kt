@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,6 +79,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -232,6 +234,7 @@ private fun BalanceIslandScreen(
     var apiKey by rememberSaveable { mutableStateOf("") }
     var showKey by rememberSaveable { mutableStateOf(false) }
     var displayMode by remember { mutableStateOf(preferences.mode()) }
+    var providerGroup by remember { mutableStateOf(preferences.providerGroup()) }
     var position by remember { mutableStateOf(preferences.position()) }
     var visualStyle by remember { mutableStateOf(preferences.visualStyle()) }
     var contentMode by remember { mutableStateOf(preferences.contentMode()) }
@@ -250,6 +253,9 @@ private fun BalanceIslandScreen(
     }
     var verticalOffset by remember {
         mutableFloatStateOf(preferences.verticalOffsetDp().toFloat())
+    }
+    var contentWidth by remember {
+        mutableFloatStateOf(preferences.contentWidthDp().toFloat())
     }
     val snackbar = remember { SnackbarHostState() }
 
@@ -287,6 +293,12 @@ private fun BalanceIslandScreen(
             displayMode = ProviderDisplayMode.AUTO_CONFIGURED
             preferences.setMode(displayMode)
         }
+        if (displayMode == ProviderDisplayMode.CUSTOM_GROUP &&
+            providerGroup.intersect(providers).isEmpty() && providers.isNotEmpty()
+        ) {
+            providerGroup = providers
+            preferences.setProviderGroup(providerGroup)
+        }
     }
 
     Scaffold(
@@ -308,7 +320,13 @@ private fun BalanceIslandScreen(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            StatusBarPreview(state.snapshots, visualStyle, textColor, contentMode)
+            StatusBarPreview(
+                preferences.select(state.snapshots),
+                visualStyle,
+                textColor,
+                contentMode,
+                contentWidth.toInt()
+            )
 
             ExpandableSection(stringResource(R.string.section_account_status), initiallyExpanded = true) {
                 if (state.snapshots.isEmpty()) {
@@ -518,12 +536,23 @@ private fun BalanceIslandScreen(
             }
 
             ExpandableSection(stringResource(R.string.section_display_accounts)) {
+                val configuredProviders = state.credentials.map { it.provider }.distinct()
+                val configuredProviderSet = configuredProviders.toSet()
                 ProviderDisplayMode.entries.forEach { mode ->
-                    val enabled = mode.provider == null ||
-                        state.credentials.any { it.provider == mode.provider }
+                    val enabled = when (mode) {
+                        ProviderDisplayMode.AUTO_CONFIGURED -> true
+                        ProviderDisplayMode.CUSTOM_GROUP -> configuredProviders.isNotEmpty()
+                        else -> mode.provider?.let { it in configuredProviderSet } == true
+                    }
                     FilterChip(
                         selected = displayMode == mode,
                         onClick = {
+                            if (mode == ProviderDisplayMode.CUSTOM_GROUP &&
+                                providerGroup.intersect(configuredProviderSet).isEmpty()
+                            ) {
+                                providerGroup = configuredProviderSet
+                                preferences.setProviderGroup(providerGroup)
+                            }
                             displayMode = mode
                             preferences.setMode(mode)
                         },
@@ -531,6 +560,32 @@ private fun BalanceIslandScreen(
                         label = { Text(mode.localizedLabel()) },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+                if (displayMode == ProviderDisplayMode.CUSTOM_GROUP) {
+                    Text(
+                        stringResource(R.string.provider_group_help),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    configuredProviders.forEach { provider ->
+                        val activeSelection = providerGroup.intersect(configuredProviderSet)
+                        val selected = provider in providerGroup
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                if (!selected || activeSelection.size > 1) {
+                                    providerGroup = if (selected) {
+                                        providerGroup - provider
+                                    } else {
+                                        providerGroup + provider
+                                    }
+                                    preferences.setProviderGroup(providerGroup)
+                                }
+                            },
+                            label = { Text(provider.displayName) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 Text(
                     stringResource(R.string.display_rotation_help),
@@ -587,6 +642,20 @@ private fun BalanceIslandScreen(
                         preferences.setVerticalOffsetDp(verticalOffset.toInt())
                     },
                     valueRange = 0f..72f
+                )
+                Text(stringResource(R.string.overlay_content_width, contentWidth.toInt()))
+                Slider(
+                    value = contentWidth,
+                    onValueChange = { contentWidth = it },
+                    onValueChangeFinished = {
+                        preferences.setContentWidthDp(contentWidth.toInt())
+                    },
+                    valueRange = 72f..320f
+                )
+                Text(
+                    stringResource(R.string.overlay_content_width_help),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Text(
                     stringResource(R.string.safe_area_help),
@@ -913,7 +982,8 @@ private fun StatusBarPreview(
     snapshots: List<BalanceSnapshot>,
     visualStyle: StatusBarVisualStyle,
     configuredColor: StatusBarTextColor,
-    contentMode: BalanceContentMode
+    contentMode: BalanceContentMode,
+    contentWidthDp: Int
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val snapshot = snapshots.firstOrNull()
@@ -970,7 +1040,10 @@ private fun StatusBarPreview(
                     "$qualifier ${BalanceTextFormatter.compact(context, snapshot, showToday)}"
                 },
                 color = displayColor,
-                style = MaterialTheme.typography.bodySmall.copy(shadow = previewShadow)
+                style = MaterialTheme.typography.bodySmall.copy(shadow = previewShadow),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = contentWidthDp.dp)
             )
         }
     }
@@ -1109,9 +1182,11 @@ private fun statusColor(status: SnapshotStatus) = when (status) {
 }
 
 @Composable
-private fun ProviderDisplayMode.localizedLabel(): String = provider?.let {
-    stringResource(R.string.mode_pin_provider, it.displayName)
-} ?: stringResource(R.string.mode_auto)
+private fun ProviderDisplayMode.localizedLabel(): String = when (this) {
+    ProviderDisplayMode.AUTO_CONFIGURED -> stringResource(R.string.mode_auto)
+    ProviderDisplayMode.CUSTOM_GROUP -> stringResource(R.string.mode_custom_group)
+    else -> stringResource(R.string.mode_pin_provider, checkNotNull(provider).displayName)
+}
 
 @Composable
 private fun StatusBarPositionPreset.localizedLabel(): String = stringResource(

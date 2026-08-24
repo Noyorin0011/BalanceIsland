@@ -10,6 +10,7 @@ import java.util.Locale
 
 enum class ProviderDisplayMode(val provider: Provider?) {
     AUTO_CONFIGURED(null),
+    CUSTOM_GROUP(null),
     PIN_DEEPSEEK(Provider.DEEPSEEK),
     PIN_OPENAI(Provider.OPENAI),
     PIN_OPENROUTER(Provider.OPENROUTER),
@@ -124,6 +125,19 @@ class OverlayDisplayPreferences(context: Context) {
         putString(KEY_PROVIDER_DISPLAY_MODE, value.name)
     }
 
+    fun providerGroup(): Set<Provider> = prefs
+        .getStringSet(KEY_PROVIDER_GROUP, emptySet())
+        .orEmpty()
+        .mapNotNullTo(linkedSetOf()) { name ->
+            runCatching { Provider.valueOf(name) }.getOrNull()
+        }
+
+    fun setProviderGroup(providers: Set<Provider>) {
+        prefs.edit().putStringSet(KEY_PROVIDER_GROUP, providers.mapTo(linkedSetOf()) { it.name })
+            .apply()
+        notifyChanged()
+    }
+
     fun position(): StatusBarPositionPreset = enumPreference(
         KEY_POSITION_PRESET,
         StatusBarPositionPreset.LEFT_SAFE
@@ -166,6 +180,17 @@ class OverlayDisplayPreferences(context: Context) {
         notifyChanged()
     }
 
+    fun contentWidthDp(): Int = prefs.getInt(KEY_CONTENT_WIDTH_DP, DEFAULT_CONTENT_WIDTH_DP)
+        .coerceIn(MIN_CONTENT_WIDTH_DP, MAX_CONTENT_WIDTH_DP)
+
+    fun setContentWidthDp(value: Int) {
+        prefs.edit().putInt(
+            KEY_CONTENT_WIDTH_DP,
+            value.coerceIn(MIN_CONTENT_WIDTH_DP, MAX_CONTENT_WIDTH_DP)
+        ).apply()
+        notifyChanged()
+    }
+
     fun refreshIntervalMinutes(): Int =
         prefs.getInt(KEY_REFRESH_INTERVAL_MINUTES, DEFAULT_REFRESH_INTERVAL_MINUTES)
             .coerceIn(MIN_REFRESH_INTERVAL_MINUTES, MAX_REFRESH_INTERVAL_MINUTES)
@@ -198,11 +223,13 @@ class OverlayDisplayPreferences(context: Context) {
     }
 
     fun select(snapshots: List<BalanceSnapshot>): List<BalanceSnapshot> {
-        val pinned = mode().provider
-        return if (pinned == null) {
-            snapshots
-        } else {
-            snapshots.filter { it.provider == pinned }.ifEmpty { snapshots }
+        return when (val displayMode = mode()) {
+            ProviderDisplayMode.AUTO_CONFIGURED -> snapshots
+            ProviderDisplayMode.CUSTOM_GROUP -> {
+                val selected = providerGroup()
+                snapshots.filter { it.provider in selected }.ifEmpty { snapshots }
+            }
+            else -> snapshots.filter { it.provider == displayMode.provider }.ifEmpty { snapshots }
         }
     }
 
@@ -225,12 +252,14 @@ class OverlayDisplayPreferences(context: Context) {
     companion object {
         private const val PREFS_NAME = "overlay_settings"
         private const val KEY_PROVIDER_DISPLAY_MODE = "provider_display_mode"
+        private const val KEY_PROVIDER_GROUP = "provider_group"
         private const val KEY_POSITION_PRESET = "status_bar_position_preset"
         private const val KEY_VISUAL_STYLE = "status_bar_visual_style"
         private const val KEY_CONTENT_MODE = "balance_content_mode"
         private const val KEY_TEXT_COLOR = "status_bar_text_color"
         private const val KEY_HORIZONTAL_OFFSET_DP = "status_bar_horizontal_offset_dp"
         private const val KEY_VERTICAL_OFFSET_DP = "status_bar_vertical_adjustment_dp"
+        private const val KEY_CONTENT_WIDTH_DP = "status_bar_content_width_dp"
         private const val KEY_REFRESH_INTERVAL_MINUTES = "refresh_interval_minutes"
         private const val KEY_AUTO_HIDE_ENABLED = "auto_hide_enabled"
         private const val KEY_AUTO_HIDE_MINUTES = "auto_hide_minutes"
@@ -240,6 +269,9 @@ class OverlayDisplayPreferences(context: Context) {
         private const val DEFAULT_AUTO_HIDE_MINUTES = 30
         private const val MIN_AUTO_HIDE_MINUTES = 5
         private const val MAX_AUTO_HIDE_MINUTES = 1440
+        private const val DEFAULT_CONTENT_WIDTH_DP = 220
+        private const val MIN_CONTENT_WIDTH_DP = 72
+        private const val MAX_CONTENT_WIDTH_DP = 320
         const val ACTION_DISPLAY_SETTINGS_CHANGED =
             "com.noyorin.balanceisland.DISPLAY_SETTINGS_CHANGED"
     }

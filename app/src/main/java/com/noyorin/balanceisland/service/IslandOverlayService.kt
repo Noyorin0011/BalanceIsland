@@ -295,23 +295,23 @@ class IslandOverlayService : Service() {
             val outlined = visualStyle == StatusBarVisualStyle.OUTLINED_TEXT
             row.addView(providerIcon(snapshot.provider), linearParams(dp(17), dp(17)))
             val sameProviderCount = snapshots.count { it.provider == snapshot.provider }
-            if (sameProviderCount > 1 || snapshot.accountLabel.isNotBlank()) {
-                row.addView(
-                    statusText(
-                        "［${snapshot.accountDisplayLabel}］",
-                        displayTextColor,
-                        10.5f,
-                        outlined
-                    )
-                )
-            }
             val showToday = displayPreferences.contentMode() == BalanceContentMode.TODAY_AND_BALANCE ||
                 (displayPreferences.contentMode() == BalanceContentMode.AUTO_ROTATE && showDailyDetail)
             val compactText = BalanceTextFormatter.compact(this, snapshot, showToday)
-            row.addView(statusText(" $compactText", displayTextColor, 11.5f, outlined).apply {
-                maxWidth = dp(STATUS_BAR_MAX_WIDTH_DP)
-                maxLines = 1
-                ellipsize = TextUtils.TruncateAt.END
+            val qualifier = if (sameProviderCount > 1 || snapshot.accountLabel.isNotBlank()) {
+                "［${snapshot.accountDisplayLabel}］ "
+            } else {
+                ""
+            }
+            row.addView(statusText(" $qualifier$compactText", displayTextColor, 11.5f, outlined).apply {
+                maxWidth = dp(displayPreferences.contentWidthDp())
+                setSingleLine(true)
+                ellipsize = TextUtils.TruncateAt.MARQUEE
+                marqueeRepeatLimit = -1
+                isSelected = true
+                setHorizontallyScrolling(true)
+                isHorizontalFadingEdgeEnabled = true
+                setFadingEdgeLength(dp(10))
             })
         }
         root.addView(
@@ -608,7 +608,6 @@ class IslandOverlayService : Service() {
         private const val ROTATE_INTERVAL_MS = 5_000L
         private const val HIDE_CHECK_INTERVAL_MS = 30_000L
         private const val STATUS_BAR_TEXT_HEIGHT_DP = 26
-        private const val STATUS_BAR_MAX_WIDTH_DP = 220
         private const val FALLBACK_STATUS_BAR_HEIGHT_DP = 28
         private const val MIN_SAFE_INSET_DP = 16
         private const val MIN_EDGE_INSET_DP = 4

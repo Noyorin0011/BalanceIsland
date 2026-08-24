@@ -2,7 +2,7 @@
 
 ## 当前基线
 
-继续完善现有 Kotlin/Compose Android 工程，不重写架构。当前 `0.8.1` 已实现 9 家服务商、多 Key 加密保存、独立查询缓存、状态栏文字条、分级额度告警、异常变动报警、无变化自动隐藏与静默恢复提醒、手动余额、控制中心磁贴、后台恢复、OpenAI Project/Admin Key 分流、Xiaomi MiMo 普通 Key 校验、Google Gemini `AQ.`/`AIza` Key 原生校验，以及简体中文、繁體中文、English、日本語、한국어切换。
+继续完善现有 Kotlin/Compose Android 工程，不重写架构。当前 `0.8.2` 已实现 9 家服务商、多 Key 加密保存、独立查询缓存、状态栏文字条、自动/固定/自定义 Provider 分组轮播、可调文字宽度与长文字平滑滚动、分级额度告警、异常变动报警、无变化自动隐藏与静默恢复提醒、手动余额、控制中心磁贴、后台恢复、OpenAI Project/Admin Key 分流、Xiaomi MiMo 普通 Key 校验、Google Gemini `AQ.`/`AIza` Key 原生校验，以及简体中文、繁體中文、English、日本語、한국어切换。
 
 显示层只使用 Android 公开的 `TYPE_APPLICATION_OVERLAY`、WindowInsets、DisplayCutout 和 RoundedCorner API。不得加入厂商型号白名单、隐藏 SystemUI 反射或厂商专有卡片 SDK。
 
@@ -17,6 +17,7 @@
 7. 验证 1 分钟刷新、15 分钟 WorkManager 兜底、橙色/红色告警、下降步进通知与异常变动冷却。
 8. 验证自动隐藏关闭时保持常驻；开启后超时隐藏，余额变化时恢复并只发静默通知；通知点击恢复文字条。
 9. 验证切换服务商会清空备注和 Key；MiMo `sk-` Key 可校验，`tp-` Key 显示明确的不支持原因。
+10. 验证自定义 Provider 分组只轮播所选账户、至少保留一个可用选项；分别以 `72/220/320dp` 检查短文字静止、长文字平滑循环滚动及左右定位。
 
 验收标准：应用不崩溃；不显示未配置平台；Key 不泄漏；语言切换无残留硬编码文案；安全区在主要屏幕形态可用；多账户增删、迁移和轮播正确。
 

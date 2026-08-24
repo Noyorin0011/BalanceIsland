@@ -41,7 +41,8 @@
     <string name="refresh_interval_help">Range: 1–1440; default: 1. Active while the overlay is running.</string>
     <string name="save_refresh_interval">Save refresh interval</string>
     <string name="background_refresh_help">Vendor battery policies may delay background work. Allow background activity and disable battery optimization for this app.</string>
-    <string name="display_rotation_help">Auto mode rotates every 5 seconds. Tap the overlay to switch immediately.</string>
+    <string name="display_rotation_help">Auto and custom-group modes rotate every 5 seconds. Tap the overlay to switch immediately.</string>
+    <string name="provider_group_help">Select at least one provider. The overlay rotates only configured accounts from the selected providers.</string>
     <string name="content_balance_only">Balance only</string>
     <string name="content_today_balance">Today used / balance</string>
     <string name="content_auto_rotate">Rotate balance and daily use</string>
@@ -50,6 +51,8 @@
     <string name="status_today_estimated">T~%1$s/L%2$s</string>
     <string name="horizontal_offset">Extra horizontal offset: %1$d dp</string>
     <string name="vertical_offset">Distance from screen top: %1$d dp</string>
+    <string name="overlay_content_width">Scrolling text width: %1$d dp</string>
+    <string name="overlay_content_width_help">Excludes the provider icon. Short text stays still; overflowing text scrolls smoothly in a loop.</string>
     <string name="safe_area_help">Safe presets read system cutout and rounded-corner insets and keep a minimum side margin.</string>
     <string name="normal_text_color">Normal balance text color</string>
     <string name="warning_color_help">Alert states override the color: orange near the line and red below it.</string>
@@ -77,6 +80,7 @@
     <string name="key_suffix">Key suffix: %1$s</string>
     <string name="delete">Delete</string>
     <string name="mode_auto">Auto rotation</string>
+    <string name="mode_custom_group">Custom rotation group</string>
     <string name="mode_pin_provider">Pin %1$s</string>
     <string name="position_left_safe">Top left · safe area</string>
     <string name="position_right_safe">Top right · safe area</string>

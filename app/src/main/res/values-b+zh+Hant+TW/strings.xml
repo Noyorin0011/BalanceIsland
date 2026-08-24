@@ -41,7 +41,8 @@
     <string name="refresh_interval_help">範圍：1–1440；預設值：1。文字條執行期間生效。</string>
     <string name="save_refresh_interval">儲存更新間隔</string>
     <string name="background_refresh_help">各家廠商的省電政策可能延遲背景工作。請允許此應用程式在背景執行，並關閉電池最佳化。</string>
-    <string name="display_rotation_help">自動模式每 5 秒輪播；點按文字條可立即切換。</string>
+    <string name="display_rotation_help">自動及群組模式每 5 秒輪播；點按文字條可立即切換。</string>
+    <string name="provider_group_help">請至少選擇一家服務商；文字條只輪播所選服務商下已設定的帳戶。</string>
     <string name="content_balance_only">僅顯示餘額</string>
     <string name="content_today_balance">今日已用 / 餘額</string>
     <string name="content_auto_rotate">餘額與今日用量輪播</string>
@@ -50,6 +51,8 @@
     <string name="status_today_estimated">今約%1$s/餘%2$s</string>
     <string name="horizontal_offset">額外水平偏移：%1$d dp</string>
     <string name="vertical_offset">距離螢幕頂端：%1$d dp</string>
+    <string name="overlay_content_width">文字捲動區域寬度：%1$d dp</string>
+    <string name="overlay_content_width_help">不包含服務商圖示。短文字保持靜止，超出寬度時自動平滑循環捲動。</string>
     <string name="safe_area_help">安全預設會讀取系統的顯示缺口與圓角 Insets，並保留最小側邊留白。</string>
     <string name="normal_text_color">正常餘額文字顏色</string>
     <string name="warning_color_help">警告狀態會覆寫顏色：接近警告線為橘色，低於警告線為紅色。</string>
@@ -77,6 +80,7 @@
     <string name="key_suffix">Key 末四碼：%1$s</string>
     <string name="delete">刪除</string>
     <string name="mode_auto">自動輪播</string>
+    <string name="mode_custom_group">自訂輪播群組</string>
     <string name="mode_pin_provider">固定 %1$s</string>
     <string name="position_left_safe">左上・安全區域</string>
     <string name="position_right_safe">右上・安全區域</string>

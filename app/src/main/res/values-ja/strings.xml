@@ -41,7 +41,8 @@
     <string name="refresh_interval_help">範囲：1〜1440、既定値：1。オーバーレイ実行中に有効です。</string>
     <string name="save_refresh_interval">更新間隔を保存</string>
     <string name="background_refresh_help">メーカーの省電力ポリシーによりバックグラウンド処理が遅れる場合があります。このアプリのバックグラウンド動作を許可し、バッテリー最適化を無効にしてください。</string>
-    <string name="display_rotation_help">自動モードは 5 秒ごとに切り替わります。オーバーレイをタップするとすぐに切り替わります。</string>
+    <string name="display_rotation_help">自動モードとカスタムグループは 5 秒ごとに切り替わります。オーバーレイをタップするとすぐに切り替わります。</string>
+    <string name="provider_group_help">1 つ以上のプロバイダーを選択してください。選択したプロバイダーの設定済みアカウントのみを切り替えます。</string>
     <string name="content_balance_only">残高のみ</string>
     <string name="content_today_balance">本日の使用額 / 残高</string>
     <string name="content_auto_rotate">残高と本日の使用額を交互表示</string>
@@ -50,6 +51,8 @@
     <string name="status_today_estimated">今日約%1$s/残%2$s</string>
     <string name="horizontal_offset">追加の水平オフセット：%1$d dp</string>
     <string name="vertical_offset">画面上端からの距離：%1$d dp</string>
+    <string name="overlay_content_width">スクロール文字幅：%1$d dp</string>
+    <string name="overlay_content_width_help">プロバイダーアイコンは含みません。短い文字は静止し、幅を超える文字は滑らかにループスクロールします。</string>
     <string name="safe_area_help">安全プリセットはシステムの切り欠きと角丸のインセットを読み取り、最小限の側面余白を確保します。</string>
     <string name="normal_text_color">通常時の残高文字色</string>
     <string name="warning_color_help">警告状態では色が上書きされます：警告ライン付近はオレンジ、警告ラインを下回ると赤です。</string>
@@ -77,6 +80,7 @@
     <string name="key_suffix">Key 末尾 4 桁：%1$s</string>
     <string name="delete">削除</string>
     <string name="mode_auto">自動ローテーション</string>
+    <string name="mode_custom_group">カスタム切り替えグループ</string>
     <string name="mode_pin_provider">%1$s に固定</string>
     <string name="position_left_safe">左上・セーフエリア</string>
     <string name="position_right_safe">右上・セーフエリア</string>
