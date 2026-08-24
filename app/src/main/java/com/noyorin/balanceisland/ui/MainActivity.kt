@@ -15,9 +15,9 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,10 +44,16 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -66,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -105,6 +112,8 @@ import com.noyorin.balanceisland.display.StatusBarPositionPreset
 import com.noyorin.balanceisland.display.StatusBarContrast
 import com.noyorin.balanceisland.display.StatusBarTextColor
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
+import com.noyorin.balanceisland.experimental.ExperimentalPlanActivity
+import com.noyorin.balanceisland.experimental.ExperimentalPlanPreferences
 import com.noyorin.balanceisland.quicksettings.BalanceQuickSettingsTileService
 import com.noyorin.balanceisland.localization.AppLanguage
 import com.noyorin.balanceisland.localization.AppLanguagePreferences
@@ -113,6 +122,8 @@ import com.noyorin.balanceisland.service.ServiceRuntimePreferences
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<MainViewModel>()
@@ -161,12 +172,12 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         val filter = IntentFilter(BalanceRepository.ACTION_BALANCE_UPDATED)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(updateReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            registerReceiver(updateReceiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            this,
+            updateReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         viewModel.loadCached()
     }
 
@@ -215,6 +226,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private enum class SettingsPage {
+    OVERVIEW,
+    ACCOUNTS,
+    DISPLAY,
+    SYSTEM,
+    EXPERIMENTAL
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BalanceIslandScreen(
@@ -228,6 +247,24 @@ private fun BalanceIslandScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val preferences = remember { OverlayDisplayPreferences(context) }
     val runtimePreferences = remember { ServiceRuntimePreferences(context) }
+    val experimentalPreferences = remember { ExperimentalPlanPreferences(context) }
+    val drawerState = androidx.compose.material3.rememberDrawerState(DrawerValue.Closed)
+    val coroutineScope = rememberCoroutineScope()
+
+    var selectedPageName by rememberSaveable { mutableStateOf(SettingsPage.OVERVIEW.name) }
+    val selectedPage = SettingsPage.valueOf(selectedPageName)
+    var overlayRunning by remember {
+        mutableStateOf(runtimePreferences.serviceRunning() || runtimePreferences.desiredRunning())
+    }
+    var showExperimentalConsent by rememberSaveable { mutableStateOf(false) }
+    var riskAccepted by rememberSaveable { mutableStateOf(false) }
+    var experimentalRefreshKey by remember { mutableStateOf(0) }
+    val experimentalUsage = remember(experimentalRefreshKey) { experimentalPreferences.usage() }
+    val experimentalLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        experimentalRefreshKey++
+    }
 
     var selectedProviderName by rememberSaveable { mutableStateOf(Provider.DEEPSEEK.name) }
     val selectedProvider = Provider.valueOf(selectedProviderName)
@@ -261,6 +298,13 @@ private fun BalanceIslandScreen(
     }
     val snackbar = remember { SnackbarHostState() }
 
+    LaunchedEffect(Unit) {
+        while (true) {
+            overlayRunning = runtimePreferences.serviceRunning() || runtimePreferences.desiredRunning()
+            delay(750)
+        }
+    }
+
     LaunchedEffect(state.message) {
         state.message?.let {
             snackbar.showSnackbar(it)
@@ -274,6 +318,42 @@ private fun BalanceIslandScreen(
             apiKey = ""
             accountRefreshMinutes = "0"
         }
+    }
+
+    if (showExperimentalConsent) {
+        AlertDialog(
+            onDismissRequest = { showExperimentalConsent = false },
+            title = { Text(stringResource(R.string.experimental_risk_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.experimental_risk_details))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { riskAccepted = !riskAccepted },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = riskAccepted, onCheckedChange = { riskAccepted = it })
+                        Text(stringResource(R.string.experimental_acknowledge))
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = riskAccepted,
+                    onClick = {
+                        experimentalPreferences.acceptConsent()
+                        showExperimentalConsent = false
+                        experimentalLauncher.launch(Intent(context, ExperimentalPlanActivity::class.java))
+                    }
+                ) { Text(stringResource(R.string.experimental_open)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExperimentalConsent = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            }
+        )
     }
 
     state.keyCheckError?.let { error ->
@@ -304,21 +384,91 @@ private fun BalanceIslandScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 18.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(13.dp)
-        ) {
-            Text(stringResource(R.string.screen_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = true,
+        drawerContent = {
+            ModalDrawerSheet {
+                Text(
+                    stringResource(R.string.screen_title),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                listOf(
+                    SettingsPage.OVERVIEW to R.string.menu_overview,
+                    SettingsPage.ACCOUNTS to R.string.menu_accounts,
+                    SettingsPage.DISPLAY to R.string.menu_display,
+                    SettingsPage.SYSTEM to R.string.menu_system
+                ).forEach { (page, label) ->
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(label)) },
+                        selected = selectedPage == page,
+                        onClick = {
+                            selectedPageName = page.name
+                            coroutineScope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+                Spacer(Modifier.height(18.dp))
+                HorizontalDivider(Modifier.padding(horizontal = 18.dp))
+                Text(
+                    stringResource(R.string.experimental_banner),
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 6.dp),
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_experimental)) },
+                    selected = selectedPage == SettingsPage.EXPERIMENTAL,
+                    onClick = {
+                        selectedPageName = SettingsPage.EXPERIMENTAL.name
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbar) },
+            containerColor = MaterialTheme.colorScheme.background,
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        if (overlayRunning) {
+                            overlayRunning = false
+                            stopOverlay()
+                        } else {
+                            overlayRunning = true
+                            startOverlay()
+                        }
+                    }
+                ) {
+                    Text(
+                        if (overlayRunning) "■" else "▶",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 18.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(13.dp)
+            ) {
             Text(
-                stringResource(R.string.screen_subtitle),
+                stringResource(R.string.screen_title),
+                modifier = Modifier.clickable { coroutineScope.launch { drawerState.open() } },
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                stringResource(R.string.drawer_hint),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -331,7 +481,8 @@ private fun BalanceIslandScreen(
                 contentWidth.toInt()
             )
 
-            ExpandableSection(stringResource(R.string.section_account_status), initiallyExpanded = true) {
+            if (selectedPage == SettingsPage.OVERVIEW) {
+            SectionPanel(stringResource(R.string.section_account_status)) {
                 if (state.snapshots.isEmpty()) {
                     Text(stringResource(R.string.no_accounts), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
@@ -353,8 +504,10 @@ private fun BalanceIslandScreen(
                     Text(stringResource(if (state.refreshing) R.string.refreshing else R.string.refresh_all))
                 }
             }
+            }
 
-            ExpandableSection(stringResource(R.string.section_api_accounts), initiallyExpanded = true) {
+            if (selectedPage == SettingsPage.ACCOUNTS) {
+            SectionPanel(stringResource(R.string.section_api_accounts)) {
                 Text(
                     stringResource(R.string.multi_key_help),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -490,7 +643,7 @@ private fun BalanceIslandScreen(
                 )
             }
 
-            ExpandableSection(stringResource(R.string.section_alerts)) {
+            SectionPanel(stringResource(R.string.section_alerts)) {
                 if (state.credentials.isEmpty()) {
                     Text(stringResource(R.string.add_account_first), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -508,8 +661,10 @@ private fun BalanceIslandScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            }
 
-            ExpandableSection(stringResource(R.string.section_refresh)) {
+            if (selectedPage == SettingsPage.SYSTEM) {
+            SectionPanel(stringResource(R.string.section_refresh)) {
                 OutlinedTextField(
                     value = refreshMinutes,
                     onValueChange = { refreshMinutes = it.filter(Char::isDigit).take(4) },
@@ -566,7 +721,10 @@ private fun BalanceIslandScreen(
                 )
             }
 
-            ExpandableSection(stringResource(R.string.section_display_accounts)) {
+            }
+
+            if (selectedPage == SettingsPage.DISPLAY) {
+            SectionPanel(stringResource(R.string.section_display_accounts)) {
                 val configuredProviders = state.credentials.map { it.provider }.distinct()
                 val configuredProviderSet = configuredProviders.toSet()
                 ProviderDisplayMode.entries.forEach { mode ->
@@ -625,7 +783,7 @@ private fun BalanceIslandScreen(
                 )
             }
 
-            ExpandableSection(stringResource(R.string.section_display_content)) {
+            SectionPanel(stringResource(R.string.section_display_content)) {
                 BalanceContentMode.entries.forEach { mode ->
                     FilterChip(
                         selected = contentMode == mode,
@@ -644,7 +802,7 @@ private fun BalanceIslandScreen(
                 )
             }
 
-            ExpandableSection(stringResource(R.string.section_position)) {
+            SectionPanel(stringResource(R.string.section_position)) {
                 StatusBarPositionPreset.entries.forEach { preset ->
                     FilterChip(
                         selected = position == preset,
@@ -698,7 +856,7 @@ private fun BalanceIslandScreen(
                 )
             }
 
-            ExpandableSection(stringResource(R.string.section_style)) {
+            SectionPanel(stringResource(R.string.section_style)) {
                 StatusBarVisualStyle.entries.forEach { style ->
                     FilterChip(
                         selected = visualStyle == style,
@@ -737,8 +895,10 @@ private fun BalanceIslandScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            }
 
-            ExpandableSection(stringResource(R.string.section_background), initiallyExpanded = true) {
+            if (selectedPage == SettingsPage.SYSTEM) {
+            SectionPanel(stringResource(R.string.section_background)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -770,7 +930,7 @@ private fun BalanceIslandScreen(
                 )
             }
 
-            ExpandableSection(stringResource(R.string.section_language)) {
+            SectionPanel(stringResource(R.string.section_language)) {
                 AppLanguage.entries.forEach { option ->
                     FilterChip(
                         selected = language == option,
@@ -789,67 +949,138 @@ private fun BalanceIslandScreen(
                 )
             }
 
-            ExpandableSection(stringResource(R.string.section_run), initiallyExpanded = true) {
+            SectionPanel(stringResource(R.string.section_run)) {
                 Text(
-                    stringResource(R.string.generic_device_info),
+                    stringResource(if (overlayRunning) R.string.overlay_control_stop else R.string.overlay_control_start),
                     color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodySmall
+                    fontWeight = FontWeight.SemiBold
                 )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = startOverlay, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.start_overlay)) }
-                    FilledTonalButton(onClick = stopOverlay, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.stop)) }
-                }
                 Text(
                     stringResource(R.string.permission_help),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            }
 
-            Spacer(Modifier.height(12.dp))
+            if (selectedPage == SettingsPage.EXPERIMENTAL) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.experimental_banner),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            stringResource(R.string.experimental_summary),
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+                SectionPanel(stringResource(R.string.menu_experimental)) {
+                    if (experimentalUsage == null) {
+                        Text(
+                            stringResource(R.string.experimental_no_data),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        if (experimentalUsage.planType.isNotBlank()) {
+                            Text(stringResource(R.string.experimental_plan_value, experimentalUsage.planType))
+                        }
+                        experimentalUsage.primaryRemaining?.let {
+                            Text(
+                                stringResource(R.string.experimental_primary_usage, it),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        experimentalUsage.primaryResetAtSeconds?.let {
+                            Text(
+                                stringResource(
+                                    R.string.experimental_reset,
+                                    SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(it * 1000L))
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        experimentalUsage.secondaryRemaining?.let {
+                            Text(
+                                stringResource(R.string.experimental_secondary_usage, it),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        experimentalUsage.secondaryResetAtSeconds?.let {
+                            Text(
+                                stringResource(
+                                    R.string.experimental_reset,
+                                    SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(it * 1000L))
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            stringResource(
+                                R.string.experimental_updated,
+                                SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+                                    .format(Date(experimentalUsage.updatedAtMillis))
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            if (experimentalPreferences.consentAccepted()) {
+                                experimentalLauncher.launch(Intent(context, ExperimentalPlanActivity::class.java))
+                            } else {
+                                riskAccepted = false
+                                showExperimentalConsent = true
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(stringResource(R.string.experimental_open)) }
+                    Text(
+                        stringResource(R.string.experimental_risk_details),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(84.dp))
         }
+    }
     }
 }
 
 @Composable
-private fun ExpandableSection(
+private fun SectionPanel(
     title: String,
-    initiallyExpanded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
-    Card(
-        modifier = Modifier.fillMaxWidth().animateContentSize(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded }
-                    .padding(horizontal = 16.dp, vertical = 15.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    if (expanded) "▾" else "▸",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (expanded) {
-                Column(
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    content = content
-                )
-            }
-        }
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        HorizontalDivider()
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
     }
 }
 

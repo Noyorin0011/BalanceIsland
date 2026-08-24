@@ -1,5 +1,6 @@
 package com.noyorin.balanceisland.quicksettings
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
@@ -25,6 +26,7 @@ class BalanceQuickSettingsTileService : TileService() {
         updateTile()
     }
 
+    @SuppressLint("StartActivityAndCollapseDeprecated")
     override fun onClick() {
         super.onClick()
         if (runtime.serviceRunning()) {
@@ -45,7 +47,6 @@ class BalanceQuickSettingsTileService : TileService() {
                     )
                 )
             } else {
-                @Suppress("DEPRECATION")
                 startActivityAndCollapse(intent)
             }
             return

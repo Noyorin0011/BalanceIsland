@@ -160,18 +160,22 @@ class BalanceAlertNotifier(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notificationId = (snapshot.credentialId.hashCode() * 31 + ANOMALY_SALT) and Int.MAX_VALUE
-        NotificationManagerCompat.from(context).notify(
-            notificationId,
-            NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher)
-                .setContentTitle(title)
-                .setContentText(content)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .build()
-        )
+        try {
+            NotificationManagerCompat.from(context).notify(
+                notificationId,
+                NotificationCompat.Builder(context, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_launcher)
+                    .setContentTitle(title)
+                    .setContentText(content)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .build()
+            )
+        } catch (_: SecurityException) {
+            // The notification permission may be revoked between the check and this call.
+        }
     }
 
     private fun canNotify(): Boolean {

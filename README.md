@@ -8,11 +8,13 @@
 
 > GitHub Actions 会在推送 `main`、提交 PR、手动运行或推送 `v*` 标签时使用 JDK 17 与 Android SDK 35 构建 APK；安全上下文中还会使用仓库 Secrets 生成正式签名 Release APK。后续测试步骤见 `CODEX_TASK_SPEC.md`。
 
-完整版本变化见 [`CHANGELOG.md`](CHANGELOG.md)。
+完整版本变化见 [`CHANGELOG.md`](CHANGELOG.md)；非官方套餐读取的风险与数据边界见 [`EXPERIMENTAL_FEATURES.md`](EXPERIMENTAL_FEATURES.md)。
 
 ## 已实现
 
-- Kotlin + Jetpack Compose 设置页，所有功能按可伸缩分类卡片组织。
+- Kotlin + Jetpack Compose 设置页，使用默认隐藏的侧边栏组织功能；支持左侧边缘手势和顶部标题点击打开。
+- 右下角浮动按钮可直接启动或停止状态栏浮岛，并显示当前运行状态。
+- 可选的 ChatGPT/Codex 套餐用量实验区；应用内登录前必须确认会话泄露和非公开接口失效风险。
 - `TYPE_APPLICATION_OVERLAY` 状态栏单行文字条，不依赖厂商专有卡片或私有 SystemUI 接口。
 - 仅显示已配置的 API 账户；支持 DeepSeek、OpenAI、OpenRouter、SiliconFlow、Kimi/Moonshot、Xiaomi MiMo、Anthropic、Google Gemini、xAI/Grok。
 - 同一服务商可保存多个 Key，并分别缓存、刷新和轮播。
@@ -93,16 +95,15 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 
 ## 使用
 
-1. 在“API 账户”选择服务商。
-2. 可选填写备注，再填入 Key；刷新间隔填 `0` 使用自动建议，或指定 `1–1440` 分钟，然后点击“添加并测试”。可重复添加多个账户。
-3. 展开“额度警告与手动余额”，逐账户修改刷新间隔、警告线、下降提醒步长、异常变动阈值、冷却时间和可选手动余额。
-4. 展开“刷新频率与通知”，设置调度检查间隔，并可开启 5–1440 分钟无变化自动隐藏。
-5. 在“显示账户”选择自动轮播、固定某个已配置服务商，或创建只包含部分 Provider 的自定义滚动分组。
-6. 在“位置预设”调整文字滚动区域宽度；再在“显示内容”选择仅余额、今日用量/余额或自动轮播。
-7. 在“后台运行与控制中心”可打开自动恢复，并添加“余额监控”磁贴。
-8. 在“文字样式”中选择透明文字、超薄半透明底、自动对比描边、超薄自适应底色或双层高对比文字。
-9. 在“位置预设”选择左/右圆角安全区，点击“启动文字条”并授予权限。
-10. 若位置与系统图标重叠，用水平/垂直滑块微调；点按切换账户，长按打开设置。
+1. 点击顶部标题或从左侧边缘滑动，打开侧边栏菜单。
+2. 在“账户与提醒”选择服务商，可选填写备注，再填入 Key；刷新间隔填 `0` 使用自动建议，或指定 `1–1440` 分钟，然后点击“添加并测试”。可重复添加多个账户。
+3. 在同一页面逐账户修改刷新间隔、警告线、下降提醒步长、异常变动阈值、冷却时间和可选手动余额。
+4. 在“后台与语言”设置调度检查间隔、自动隐藏、自动恢复、快速设置磁贴和界面语言。
+5. 在“浮岛显示”选择自动轮播、固定服务商或自定义 Provider 分组，并设置显示内容、位置、宽度与文字样式。
+6. 拖动文字滚动区域宽度滑块时，预览与已运行浮岛会逐 dp 实时重绘。
+7. 点击右下角按钮启动浮岛并授予悬浮窗权限；再次点击即可停止。
+8. 若位置与系统图标重叠，用水平/垂直滑块微调；点按浮岛切换账户，长按返回设置。
+9. 如需尝试 ChatGPT/Codex 套餐用量，在侧边栏警示色实验区阅读并确认风险；失败时不要复制或分享 Cookie。
 
 ## 通用设备适配
 
@@ -122,7 +123,7 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - 构建使用 JDK 17、Gradle 8.11.1、Android SDK 35，并先校验全部五套语言资源。
 - 非 PR 构建会读取 `ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`，额外生成正式签名 Release APK；PR 不接触这些 Secrets。
 - APK 在对应 Actions 运行页的 `Artifacts` 区域下载：Debug 默认保留 14 天，签名 Release 默认保留 30 天。
-- 非 PR 构建成功后会创建或更新与当前 `versionName` 对应的正式 Release（例如 `v0.8.5`），优先使用 `NOTE.md` 作为当前版本说明；缺失时从 `CHANGELOG.md` 自动截取对应版本，并上传通过证书检查的 `BalanceIsland-v<version>.apk`。
+- 非 PR 构建成功后会创建或更新与当前 `versionName` 对应的正式 Release（例如 `v0.9.0`），优先使用 `NOTE.md` 作为当前版本说明；缺失时从 `CHANGELOG.md` 自动截取对应版本，并上传通过证书检查的 `BalanceIsland-v<version>.apk`。
 - Debug APK 只适合测试；对外发布和覆盖升级应始终使用同一套 Release Keystore 签名的 APK。
 - 正式 Release 的签名冲突问题已解决：工作流会检查证书并拒绝 `CN=Android Debug`。早期 Debug 签名安装只需卸载迁移一次，之后正式版本可连续覆盖升级。
 
@@ -131,6 +132,7 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - API Key 不写入源码、不打印日志、不加入 Android 备份。
 - 每个 Key 都使用 Android Keystore 中的不可导出 AES 密钥加密。
 - OpenAI Admin Key 权限很高。本 MVP 适合个人侧载；公众发布前应改为自建只读后端和短期令牌。
+- ChatGPT/Codex 套餐读取是默认关闭的非官方实验功能；登录会话等同密码，完整风险和清除方式见 [`EXPERIMENTAL_FEATURES.md`](EXPERIMENTAL_FEATURES.md)。
 
 ## 已知限制
 
