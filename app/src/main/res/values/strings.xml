@@ -9,7 +9,7 @@
     <string name="tile_running">运行中</string>
     <string name="tile_stopped">已停止</string>
     <string name="screen_title">状态栏余额</string>
-    <string name="screen_subtitle">8 家服务商 · 后台恢复 · 分级额度告警</string>
+    <string name="screen_subtitle">9 家服务商 · 后台恢复 · 分级额度告警</string>
     <string name="section_account_status">账户状态</string>
     <string name="section_api_accounts">API 账户</string>
     <string name="section_alerts">额度警告与手动余额</string>
@@ -100,6 +100,7 @@
     <string name="provider_help_openrouter">余额接口需要 Management Key，普通推理 Key 可能返回 403。</string>
     <string name="provider_help_siliconflow">通过官方 /user/info 接口读取总余额。</string>
     <string name="provider_help_moonshot">普通 Key 可直接读取余额；自动兼容国内站人民币和国际站美元。</string>
+    <string name="provider_help_mimo">普通按量 sk- Key 通过官方模型列表验证；没有公开余额接口，请设置手动余额。不支持 Token Plan 的 tp- Key。</string>
     <string name="provider_help_anthropic">普通 Key 不提供剩余余额；验证后可设置手动余额。</string>
     <string name="provider_help_gemini">Google AI Studio Key 不提供剩余余额；验证后可设置手动余额。</string>
     <string name="provider_help_xai">普通 Key 不提供剩余余额；验证后可设置手动余额。</string>
@@ -136,6 +137,7 @@
     <string name="error_missing_credit">响应中没有额度数据</string>
     <string name="error_missing_account">响应中没有账户数据</string>
     <string name="error_missing_recognizable_balance">响应中没有可识别的余额字段</string>
+    <string name="error_mimo_token_plan_unsupported">MiMo Token Plan 的 tp- Key 仅用于指定编程工具，不能在本应用中验证；请使用普通按量 sk- Key</string>
     <string name="error_empty_response">服务返回空响应</string>
     <string name="error_api">API 返回错误</string>
     <string name="error_network">网络连接失败，请稍后重试</string>
@@ -149,4 +151,26 @@
     <string name="alert_channel_name">API 额度警告</string>
     <string name="alert_channel_description">余额接近警告线、越过警告线或按设定步长下降时提醒</string>
     <string name="list_separator">；</string>
+    <string name="auto_hide_title">自动隐藏与静默提醒</string>
+    <string name="auto_hide_summary">长时间无变动时隐藏文字条，余额变化时自动恢复并静默提示</string>
+    <string name="auto_hide_timeout_label">无变动多少分钟后隐藏</string>
+    <string name="auto_hide_timeout_help">可设置 5–1440 分钟；首次启动和新增账户只建立基线</string>
+    <string name="save_refresh_settings">保存刷新与自动隐藏设置</string>
+    <string name="change_notification_title">余额已更新</string>
+    <string name="change_notification_text">%1$s</string>
+    <string name="change_channel_name">余额变化（静默）</string>
+    <string name="anomaly_alerts_title">异常变动报警</string>
+    <string name="anomaly_alerts_summary">余额突涨或突降超过阈值时发送高优先级提醒</string>
+    <string name="anomaly_threshold_label">绝对变动阈值</string>
+    <string name="anomaly_percent_label">相对变动阈值（百分比）</string>
+    <string name="anomaly_mode_label">判定方式</string>
+    <string name="anomaly_mode_absolute">达到绝对阈值</string>
+    <string name="anomaly_mode_percent">达到百分比阈值</string>
+    <string name="anomaly_mode_both">任一阈值达到</string>
+    <string name="anomaly_cooldown_label">同账户提醒冷却（分钟）</string>
+    <string name="anomaly_cooldown_help">冷却期内仍会更新比较基线，但不会重复提醒</string>
+    <string name="anomaly_title">%1$s · %2$s 异常变动</string>
+    <string name="anomaly_content">较上次 %1$s 变动 %2$s（现 %3$s）</string>
+    <string name="validation_anomaly_positive">异常变动阈值必须大于 0</string>
+    <string name="validation_anomaly_cooldown_positive">异常提醒冷却时间必须大于 0</string>
 </resources>

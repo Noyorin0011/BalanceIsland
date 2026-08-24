@@ -59,6 +59,7 @@ class BalanceRepository(private val context: Context) {
                 Provider.OPENROUTER -> fetchOpenRouter(credential)
                 Provider.SILICONFLOW -> fetchSiliconFlow(credential)
                 Provider.MOONSHOT -> fetchMoonshot(credential)
+                Provider.MIMO -> verifyMiMoKey(credential)
                 Provider.ANTHROPIC -> verifyAnthropicKey(credential)
                 Provider.GEMINI -> verifyBearerKey(
                     credential,
@@ -327,6 +328,17 @@ class BalanceRepository(private val context: Context) {
         return verifiedKeySnapshot(credential)
     }
 
+    private fun verifyMiMoKey(credential: ApiCredential): BalanceSnapshot {
+        if (credential.apiKey.startsWith(MIMO_TOKEN_PLAN_KEY_PREFIX)) {
+            throw ApiException(text(R.string.error_mimo_token_plan_unsupported))
+        }
+        getJson(
+            url = "https://api.xiaomimimo.com/v1/models",
+            headers = mapOf("api-key" to credential.apiKey)
+        )
+        return verifiedKeySnapshot(credential)
+    }
+
     private fun verifiedKeySnapshot(credential: ApiCredential) = BalanceSnapshot(
         provider = credential.provider,
         credentialId = credential.id,
@@ -433,6 +445,7 @@ class BalanceRepository(private val context: Context) {
     companion object {
         private const val NEAR_LINE_MULTIPLIER = 1.5
         private const val OPENAI_ADMIN_KEY_PREFIX = "sk-admin-"
+        private const val MIMO_TOKEN_PLAN_KEY_PREFIX = "tp-"
         private val LOCALLY_TRACKED_PROVIDERS = setOf(
             Provider.DEEPSEEK,
             Provider.MOONSHOT,

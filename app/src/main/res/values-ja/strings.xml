@@ -9,7 +9,7 @@
     <string name="tile_running">実行中</string>
     <string name="tile_stopped">停止中</string>
     <string name="screen_title">ステータスバー残高</string>
-    <string name="screen_subtitle">8 プロバイダー・バックグラウンド復旧・段階的アラート</string>
+    <string name="screen_subtitle">9 プロバイダー・バックグラウンド復旧・段階的アラート</string>
     <string name="section_account_status">アカウント状態</string>
     <string name="section_api_accounts">API アカウント</string>
     <string name="section_alerts">アラートと手動残高</string>
@@ -100,6 +100,7 @@
     <string name="provider_help_openrouter">残高エンドポイントには Management Key が必要です。推論用 Key では 403 が返される場合があります。</string>
     <string name="provider_help_siliconflow">公式の /user/info エンドポイントから総残高を読み取ります。</string>
     <string name="provider_help_moonshot">通常の Key で残高を直接取得できます。中国版の人民元と国際版の米ドルを自動判定します。</string>
+    <string name="provider_help_mimo">従量課金の sk- Key を公式モデル一覧で検証します。公開残高 API はないため手動残高を設定してください。Token Plan の tp- Key は非対応です。</string>
     <string name="provider_help_anthropic">通常の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
     <string name="provider_help_gemini">Google AI Studio の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
     <string name="provider_help_xai">通常の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
@@ -136,6 +137,7 @@
     <string name="error_missing_credit">応答にクレジットデータがありません</string>
     <string name="error_missing_account">応答にアカウントデータがありません</string>
     <string name="error_missing_recognizable_balance">応答に認識可能な残高フィールドがありません</string>
+    <string name="error_mimo_token_plan_unsupported">MiMo Token Plan の tp- Key は指定されたコーディングツール専用のため、このアプリでは検証できません。従量課金の sk- Key を使用してください。</string>
     <string name="error_empty_response">サービスが空の応答を返しました</string>
     <string name="error_api">API エラー</string>
     <string name="error_network">ネットワーク接続に失敗しました。後でもう一度お試しください。</string>
@@ -149,4 +151,26 @@
     <string name="alert_channel_name">API 残高アラート</string>
     <string name="alert_channel_description">残高が警告ラインに近づいたり、警告ラインを下回ったり、設定したステップ分減少したときに通知します</string>
     <string name="list_separator">、</string>
+    <string name="auto_hide_title">自動非表示とサイレント通知</string>
+    <string name="auto_hide_summary">変化がない状態が続くとバーを隠し、残高変化時に復帰して静かに通知します</string>
+    <string name="auto_hide_timeout_label">変化なしで非表示にするまでの分数</string>
+    <string name="auto_hide_timeout_help">5～1440 分。初回起動と新規アカウントは基準値のみ作成します</string>
+    <string name="save_refresh_settings">更新と自動非表示の設定を保存</string>
+    <string name="change_notification_title">残高が更新されました</string>
+    <string name="change_notification_text">%1$s</string>
+    <string name="change_channel_name">残高の変化（サイレント）</string>
+    <string name="anomaly_alerts_title">異常変動アラート</string>
+    <string name="anomaly_alerts_summary">残高の急増・急減がしきい値を超えたときに高優先度で通知します</string>
+    <string name="anomaly_threshold_label">絶対変動しきい値</string>
+    <string name="anomaly_percent_label">相対変動しきい値（パーセント）</string>
+    <string name="anomaly_mode_label">判定方法</string>
+    <string name="anomaly_mode_absolute">絶対しきい値に到達</string>
+    <string name="anomaly_mode_percent">割合しきい値に到達</string>
+    <string name="anomaly_mode_both">どちらかのしきい値に到達</string>
+    <string name="anomaly_cooldown_label">アカウント別通知クールダウン（分）</string>
+    <string name="anomaly_cooldown_help">クールダウン中も比較基準は更新しますが、通知は繰り返しません</string>
+    <string name="anomaly_title">%1$s・%2$s 異常変動</string>
+    <string name="anomaly_content">前回の %1$s から %2$s 変動（現在 %3$s）</string>
+    <string name="validation_anomaly_positive">異常変動のしきい値は 0 より大きい必要があります</string>
+    <string name="validation_anomaly_cooldown_positive">異常変動通知のクールダウンは 0 より大きい必要があります</string>
 </resources>

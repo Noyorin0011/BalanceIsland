@@ -28,6 +28,9 @@ enum class Provider(
     MOONSHOT(
         "Kimi / Moonshot", "CNY", "Moonshot API Key", "sk-...", BalanceCapability.DIRECT_BALANCE
     ),
+    MIMO(
+        "Xiaomi MiMo", "CNY", "MiMo API Key", "sk-...", BalanceCapability.KEY_CHECK_ONLY
+    ),
     ANTHROPIC(
         "Anthropic", "USD", "Anthropic API Key", "sk-ant-...", BalanceCapability.KEY_CHECK_ONLY
     ),
@@ -45,6 +48,12 @@ enum class SnapshotStatus {
     CRITICAL,
     ERROR,
     NOT_CONFIGURED
+}
+
+enum class AnomalyMode {
+    ABSOLUTE,
+    PERCENT,
+    BOTH
 }
 
 data class ApiCredential(
@@ -108,10 +117,17 @@ data class AccountBalanceSettings(
     val alertEnabled: Boolean = true,
     val warningLine: Double = 20.0,
     val dropStep: Double = 5.0,
-    val manualBalance: Double? = null
+    val manualBalance: Double? = null,
+    val anomalyEnabled: Boolean = false,
+    val anomalyThreshold: Double = 50.0,
+    val anomalyPercentThreshold: Double = 50.0,
+    val anomalyMode: AnomalyMode = AnomalyMode.BOTH,
+    val anomalyCooldownMinutes: Int = 1440
 )
 
 data class BalanceAlertState(
     val lastNotifiedAmount: Double?,
-    val lastLevel: Int
+    val lastLevel: Int,
+    val lastSeenAmount: Double? = null,
+    val lastAnomalyAtEpochMillis: Long? = null
 )

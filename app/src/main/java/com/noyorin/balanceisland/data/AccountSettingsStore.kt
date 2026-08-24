@@ -28,7 +28,27 @@ class AccountSettingsStore(context: Context) {
                     null
                 } else {
                     json.optDouble("manualBalance").takeIf { it.isFinite() && it >= 0.0 }
-                }
+                },
+                anomalyEnabled = json.optBoolean("anomalyEnabled", false),
+                anomalyThreshold = json.optDouble("anomalyThreshold", DEFAULT_ANOMALY_THRESHOLD)
+                    .takeIf(Double::isFinite)
+                    ?.coerceAtLeast(MIN_POSITIVE_VALUE)
+                    ?: DEFAULT_ANOMALY_THRESHOLD,
+                anomalyPercentThreshold = json.optDouble(
+                    "anomalyPercentThreshold",
+                    DEFAULT_ANOMALY_PERCENT_THRESHOLD
+                ).takeIf(Double::isFinite)
+                    ?.coerceAtLeast(MIN_POSITIVE_VALUE)
+                    ?: DEFAULT_ANOMALY_PERCENT_THRESHOLD,
+                anomalyMode = runCatching {
+                    AnomalyMode.valueOf(
+                        json.optString("anomalyMode", AnomalyMode.BOTH.name)
+                    )
+                }.getOrDefault(AnomalyMode.BOTH),
+                anomalyCooldownMinutes = json.optInt(
+                    "anomalyCooldownMinutes",
+                    DEFAULT_ANOMALY_COOLDOWN_MINUTES
+                ).coerceIn(MIN_COOLDOWN_MINUTES, MAX_COOLDOWN_MINUTES)
             )
         }.getOrElse { AccountBalanceSettings(credentialId) }
     }
@@ -39,14 +59,34 @@ class AccountSettingsStore(context: Context) {
         require(settings.manualBalance == null || settings.manualBalance >= 0.0) {
             strings.getString(R.string.validation_manual_nonnegative)
         }
+        require(settings.anomalyThreshold.isFinite() && settings.anomalyThreshold > 0.0) {
+            strings.getString(R.string.validation_anomaly_positive)
+        }
+        require(
+            settings.anomalyPercentThreshold.isFinite() &&
+                settings.anomalyPercentThreshold > 0.0
+        ) { strings.getString(R.string.validation_anomaly_positive) }
+        require(settings.anomalyCooldownMinutes > 0) {
+            strings.getString(R.string.validation_anomaly_cooldown_positive)
+        }
         val json = JSONObject()
             .put("alertEnabled", settings.alertEnabled)
             .put("warningLine", settings.warningLine)
             .put("dropStep", settings.dropStep)
             .put("manualBalance", settings.manualBalance ?: JSONObject.NULL)
+            .put("anomalyEnabled", settings.anomalyEnabled)
+            .put("anomalyThreshold", settings.anomalyThreshold)
+            .put("anomalyPercentThreshold", settings.anomalyPercentThreshold)
+            .put("anomalyMode", settings.anomalyMode.name)
+            .put(
+                "anomalyCooldownMinutes",
+                settings.anomalyCooldownMinutes.coerceIn(
+                    MIN_COOLDOWN_MINUTES,
+                    MAX_COOLDOWN_MINUTES
+                )
+            )
         prefs.edit()
             .putString(settingsKey(settings.credentialId), json.toString())
-            .remove(alertKey(settings.credentialId))
             .apply()
         notifyChanged()
     }
@@ -58,7 +98,11 @@ class AccountSettingsStore(context: Context) {
             BalanceAlertState(
                 lastNotifiedAmount = if (json.isNull("lastNotifiedAmount")) null
                 else json.optDouble("lastNotifiedAmount").takeIf(Double::isFinite),
-                lastLevel = json.optInt("lastLevel", 0)
+                lastLevel = json.optInt("lastLevel", 0),
+                lastSeenAmount = if (json.isNull("lastSeenAmount")) null
+                else json.optDouble("lastSeenAmount").takeIf(Double::isFinite),
+                lastAnomalyAtEpochMillis = if (json.isNull("lastAnomalyAtEpochMillis")) null
+                else json.optLong("lastAnomalyAtEpochMillis").takeIf { it > 0L }
             )
         }.getOrNull()
     }
@@ -67,6 +111,11 @@ class AccountSettingsStore(context: Context) {
         val json = JSONObject()
             .put("lastNotifiedAmount", state.lastNotifiedAmount ?: JSONObject.NULL)
             .put("lastLevel", state.lastLevel)
+            .put("lastSeenAmount", state.lastSeenAmount ?: JSONObject.NULL)
+            .put(
+                "lastAnomalyAtEpochMillis",
+                state.lastAnomalyAtEpochMillis ?: JSONObject.NULL
+            )
         prefs.edit().putString(alertKey(credentialId), json.toString()).apply()
     }
 
@@ -91,6 +140,11 @@ class AccountSettingsStore(context: Context) {
         private const val PREFS_NAME = "account_balance_settings"
         private const val DEFAULT_WARNING_LINE = 20.0
         private const val DEFAULT_DROP_STEP = 5.0
+        private const val DEFAULT_ANOMALY_THRESHOLD = 50.0
+        private const val DEFAULT_ANOMALY_PERCENT_THRESHOLD = 50.0
+        private const val DEFAULT_ANOMALY_COOLDOWN_MINUTES = 1440
         private const val MIN_POSITIVE_VALUE = 0.01
+        private const val MIN_COOLDOWN_MINUTES = 1
+        private const val MAX_COOLDOWN_MINUTES = 10_080
     }
 }

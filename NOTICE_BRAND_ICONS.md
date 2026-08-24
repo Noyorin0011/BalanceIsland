@@ -8,6 +8,7 @@ to identify the API selected by the user.
 - OpenRouter, KIMI, Anthropic and Google Gemini: Simple Icons vector paths.
 - SiliconFlow: vector recreation of the favicon served by `siliconflow.cn`.
 - xAI: simple geometric xAI mark sourced from `x.ai` via Wikimedia Commons.
+- Xiaomi MiMo: project-drawn orange circular MiMo initials used for provider identification.
 
 All provider names and logos are trademarks of their respective owners.
 They are used only to identify the API provider selected by the user and do not

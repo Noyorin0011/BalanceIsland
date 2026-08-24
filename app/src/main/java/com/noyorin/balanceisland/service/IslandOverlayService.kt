@@ -1,5 +1,6 @@
 package com.noyorin.balanceisland.service
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -9,6 +10,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -25,11 +27,13 @@ import android.view.Gravity
 import android.view.RoundedCorner
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.noyorin.balanceisland.R
 import com.noyorin.balanceisland.data.BalanceRepository
@@ -67,14 +71,25 @@ class IslandOverlayService : Service() {
     private var showDailyDetail = false
     private var refreshInProgress = false
     private var explicitStop = false
+    private var lastChangeAt = SystemClock.elapsedRealtime()
+    private var overlayHidden = false
+    private var lastObservedBalances: Map<String, ObservedBalance> = emptyMap()
 
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == BalanceRepository.ACTION_BALANCE_UPDATED) {
+                observeVisibleBalances()
+            }
             applyPosition()
             render()
             if (intent?.action == OverlayDisplayPreferences.ACTION_DISPLAY_SETTINGS_CHANGED ||
                 intent?.action == AppLanguagePreferences.ACTION_LANGUAGE_CHANGED
             ) {
+                if (intent.action == OverlayDisplayPreferences.ACTION_DISPLAY_SETTINGS_CHANGED) {
+                    lastChangeAt = SystemClock.elapsedRealtime()
+                    lastObservedBalances = emptyMap()
+                    if (!displayPreferences.autoHideEnabled()) showOverlay()
+                }
                 startForeground(NOTIFICATION_ID, buildNotification())
                 scheduleNextRefresh()
             }
@@ -82,6 +97,19 @@ class IslandOverlayService : Service() {
     }
 
     private val refreshRunnable = Runnable { refreshNow() }
+
+    private val hideRunnable = object : Runnable {
+        override fun run() {
+            if (!displayPreferences.autoHideEnabled()) {
+                if (overlayHidden) showOverlay()
+            } else {
+                val idleFor = SystemClock.elapsedRealtime() - lastChangeAt
+                val timeout = displayPreferences.autoHideMinutes() * 60_000L
+                if (!overlayHidden && idleFor >= timeout) hideOverlay()
+            }
+            handler.postDelayed(this, HIDE_CHECK_INTERVAL_MS)
+        }
+    }
 
     private val rotateRunnable = object : Runnable {
         override fun run() {
@@ -155,6 +183,8 @@ class IslandOverlayService : Service() {
         }
         handler.postDelayed(rotateRunnable, ROTATE_INTERVAL_MS)
         render()
+        observeVisibleBalances()
+        handler.postDelayed(hideRunnable, HIDE_CHECK_INTERVAL_MS)
         refreshNow()
     }
 
@@ -167,6 +197,10 @@ class IslandOverlayService : Service() {
                 stopSelf()
             }
             ACTION_REFRESH -> refreshNow()
+            ACTION_SHOW_OVERLAY -> {
+                lastChangeAt = SystemClock.elapsedRealtime()
+                showOverlay()
+            }
         }
         return START_STICKY
     }
@@ -307,6 +341,7 @@ class IslandOverlayService : Service() {
                     Provider.OPENROUTER -> R.drawable.ic_provider_openrouter
                     Provider.SILICONFLOW -> R.drawable.ic_provider_siliconflow
                     Provider.MOONSHOT -> R.drawable.ic_provider_kimi
+                    Provider.MIMO -> R.drawable.ic_provider_mimo
                     Provider.ANTHROPIC -> R.drawable.ic_provider_anthropic
                     Provider.GEMINI -> R.drawable.ic_provider_gemini
                     Provider.XAI -> R.drawable.ic_provider_xai
@@ -355,12 +390,92 @@ class IslandOverlayService : Service() {
     private fun visibleSnapshots(): List<BalanceSnapshot> =
         displayPreferences.select(repository.cached())
 
+    private fun observeVisibleBalances(snapshots: List<BalanceSnapshot> = visibleSnapshots()) {
+        val current = snapshots.associate { snapshot ->
+            snapshot.credentialId to ObservedBalance(
+                comparableValue = snapshot.balanceAmount?.takeIf(Double::isFinite)?.let {
+                    "number:${java.lang.Double.doubleToLongBits(it)}"
+                } ?: "text:${snapshot.primaryText}",
+                displayValue = snapshot.balanceAmount?.takeIf(Double::isFinite)?.let {
+                    BalanceTextFormatter.amount(snapshot.currencyCode, it)
+                } ?: snapshot.primaryText,
+                providerName = snapshot.provider.displayName,
+                accountLabel = snapshot.accountDisplayLabel
+            )
+        }
+        if (lastObservedBalances.isEmpty() || current.keys != lastObservedBalances.keys) {
+            lastObservedBalances = current
+            lastChangeAt = SystemClock.elapsedRealtime()
+            return
+        }
+        val changed = current.mapNotNull { (credentialId, balance) ->
+            val previous = lastObservedBalances[credentialId] ?: return@mapNotNull null
+            if (previous.comparableValue == balance.comparableValue) null else previous to balance
+        }
+        lastObservedBalances = current
+        if (changed.isEmpty()) return
+        lastChangeAt = SystemClock.elapsedRealtime()
+        if (overlayHidden) {
+            showOverlay()
+            notifySilentBalanceChange(changed)
+        }
+    }
+
+    private fun hideOverlay() {
+        if (!::root.isInitialized || overlayHidden) return
+        root.visibility = View.GONE
+        overlayHidden = true
+    }
+
+    private fun showOverlay() {
+        if (!::root.isInitialized) return
+        root.visibility = View.VISIBLE
+        overlayHidden = false
+        render()
+    }
+
+    private fun notifySilentBalanceChange(changes: List<Pair<ObservedBalance, ObservedBalance>>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return
+        val notifications = NotificationManagerCompat.from(this)
+        if (!notifications.areNotificationsEnabled()) return
+        createChangeNotificationChannel()
+        val summary = changes.joinToString("\n") { (previous, current) ->
+            "${current.providerName} · ${current.accountLabel} " +
+                "${previous.displayValue} → ${current.displayValue}"
+        }
+        val contentIntent = PendingIntent.getActivity(
+            this,
+            CHANGE_NOTIFICATION_REQUEST_CODE,
+            Intent(this, MainActivity::class.java)
+                .putExtra(EXTRA_RESTORE_OVERLAY, true)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        notifications.notify(
+            CHANGE_NOTIFICATION_ID,
+            NotificationCompat.Builder(this, CHANGE_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentTitle(strings.getString(R.string.change_notification_title))
+                .setContentText(strings.getString(R.string.change_notification_text, summary))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
+                .setContentIntent(contentIntent)
+                .setAutoCancel(true)
+                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+        )
+    }
+
     private fun refreshNow() {
         if (refreshInProgress) return
         refreshInProgress = true
         scope.launch {
             try {
-                repository.refreshAll()
+                val refreshed = repository.refreshAll()
+                observeVisibleBalances(displayPreferences.select(refreshed))
                 render()
             } finally {
                 refreshInProgress = false
@@ -397,7 +512,9 @@ class IslandOverlayService : Service() {
             PendingIntent.getActivity(
                 this,
                 0,
-                Intent(this, MainActivity::class.java),
+                Intent(this, MainActivity::class.java)
+                    .putExtra(EXTRA_RESTORE_OVERLAY, true)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         )
@@ -420,6 +537,21 @@ class IslandOverlayService : Service() {
                 strings.getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             )
+        )
+    }
+
+    private fun createChangeNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(
+                CHANGE_CHANNEL_ID,
+                strings.getString(R.string.change_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+            }
         )
     }
 
@@ -469,8 +601,12 @@ class IslandOverlayService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "balance_island_running"
+        private const val CHANGE_CHANNEL_ID = "balance_island_change"
         private const val NOTIFICATION_ID = 1001
+        private const val CHANGE_NOTIFICATION_ID = 1002
+        private const val CHANGE_NOTIFICATION_REQUEST_CODE = 1002
         private const val ROTATE_INTERVAL_MS = 5_000L
+        private const val HIDE_CHECK_INTERVAL_MS = 30_000L
         private const val STATUS_BAR_TEXT_HEIGHT_DP = 26
         private const val STATUS_BAR_MAX_WIDTH_DP = 220
         private const val FALLBACK_STATUS_BAR_HEIGHT_DP = 28
@@ -480,6 +616,8 @@ class IslandOverlayService : Service() {
         const val KEY_Y_OFFSET = "y_offset_dp"
         const val ACTION_STOP = "com.noyorin.balanceisland.STOP_OVERLAY"
         const val ACTION_REFRESH = "com.noyorin.balanceisland.REFRESH_OVERLAY"
+        const val ACTION_SHOW_OVERLAY = "com.noyorin.balanceisland.SHOW_OVERLAY"
+        const val EXTRA_RESTORE_OVERLAY = "restore_overlay"
         private const val ACTION_RESTART = "com.noyorin.balanceisland.RESTART_OVERLAY"
         private const val RESTART_REQUEST_CODE = 2002
 
@@ -515,6 +653,14 @@ class IslandOverlayService : Service() {
             )
         }
 
+        fun restore(context: Context) {
+            if (!Settings.canDrawOverlays(context)) return
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, IslandOverlayService::class.java).setAction(ACTION_SHOW_OVERLAY)
+            )
+        }
+
         private fun scheduleRestart(context: Context) {
             val alarmManager = context.getSystemService(AlarmManager::class.java)
             alarmManager.setAndAllowWhileIdle(
@@ -537,4 +683,11 @@ class IslandOverlayService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
     }
+
+    private data class ObservedBalance(
+        val comparableValue: String,
+        val displayValue: String,
+        val providerName: String,
+        val accountLabel: String
+    )
 }

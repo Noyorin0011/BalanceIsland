@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import com.noyorin.balanceisland.R
 import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import com.noyorin.balanceisland.ui.MainActivity
+import com.noyorin.balanceisland.display.BalanceTextFormatter
 import java.util.Locale
 import kotlin.math.abs
 
@@ -48,18 +49,57 @@ class BalanceAlertNotifier(private val context: Context) {
             reasons += text(R.string.alert_dropped, money(reference - amount))
         }
 
+        val now = System.currentTimeMillis()
+        val anomaly = anomalyChange(settings, previous, amount, now)
         val shouldResetReference = reference == null || amount > reference
         val shouldNotify = reasons.isNotEmpty()
         settingsStore.saveAlertState(
             snapshot.credentialId,
             BalanceAlertState(
                 lastNotifiedAmount = if (shouldNotify || shouldResetReference) amount else reference,
-                lastLevel = level
+                lastLevel = level,
+                lastSeenAmount = amount,
+                lastAnomalyAtEpochMillis = if (anomaly != null) {
+                    now
+                } else {
+                    previous?.lastAnomalyAtEpochMillis
+                }
             )
         )
         if (shouldNotify) {
             notify(snapshot, reasons.joinToString(text(R.string.list_separator)), settings.dropStep)
         }
+        if (anomaly != null) notifyAnomaly(snapshot, anomaly.first, anomaly.second)
+    }
+
+    private fun anomalyChange(
+        settings: AccountBalanceSettings,
+        previous: BalanceAlertState?,
+        amount: Double,
+        now: Long
+    ): Pair<Double, Double>? {
+        if (!settings.anomalyEnabled) return null
+        val lastSeen = previous?.lastSeenAmount ?: return null
+        val delta = amount - lastSeen
+        if (delta == 0.0) return null
+        val overAbsolute = abs(delta) >= settings.anomalyThreshold
+        val overPercent = if (lastSeen > 0.0) {
+            abs(delta) >= lastSeen * settings.anomalyPercentThreshold / 100.0
+        } else {
+            overAbsolute
+        }
+        val exceedsThreshold = when (settings.anomalyMode) {
+            AnomalyMode.ABSOLUTE -> overAbsolute
+            AnomalyMode.PERCENT -> overPercent
+            AnomalyMode.BOTH -> overAbsolute || overPercent
+        }
+        if (!exceedsThreshold) return null
+        val cooldownMs = settings.anomalyCooldownMinutes * 60_000L
+        val inCooldown = previous.lastAnomalyAtEpochMillis?.let {
+            val elapsed = now - it
+            elapsed in 0 until cooldownMs
+        } ?: false
+        return if (inCooldown) null else lastSeen to delta
     }
 
     private fun notify(snapshot: BalanceSnapshot, reason: String, dropStep: Double) {
@@ -99,6 +139,49 @@ class BalanceAlertNotifier(private val context: Context) {
         )
     }
 
+    private fun notifyAnomaly(snapshot: BalanceSnapshot, lastSeen: Double, delta: Double) {
+        if (!canNotify()) return
+        createChannel()
+        val title = text(
+            R.string.anomaly_title,
+            snapshot.provider.displayName,
+            snapshot.accountDisplayLabel
+        )
+        val content = text(
+            R.string.anomaly_content,
+            BalanceTextFormatter.amount(snapshot.currencyCode, lastSeen),
+            signedAmount(snapshot.currencyCode, delta),
+            BalanceTextFormatter.amount(snapshot.currencyCode, snapshot.balanceAmount ?: return)
+        )
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            snapshot.credentialId.hashCode(),
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notificationId = (snapshot.credentialId.hashCode() * 31 + ANOMALY_SALT) and Int.MAX_VALUE
+        NotificationManagerCompat.from(context).notify(
+            notificationId,
+            NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(content)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+        )
+    }
+
+    private fun canNotify(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return false
+        return NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
     private fun createChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -113,6 +196,9 @@ class BalanceAlertNotifier(private val context: Context) {
     }
 
     private fun money(value: Double): String = String.format(Locale.US, "%.2f", value)
+    private fun signedAmount(currencyCode: String, value: Double): String =
+        (if (value >= 0.0) "+" else "-") +
+            BalanceTextFormatter.amount(currencyCode, abs(value))
     private fun text(id: Int, vararg args: Any): String = strings.getString(id, *args)
 
     companion object {
@@ -121,5 +207,6 @@ class BalanceAlertNotifier(private val context: Context) {
         private const val LEVEL_NORMAL = 0
         private const val LEVEL_NEAR = 1
         private const val LEVEL_CRITICAL = 2
+        private const val ANOMALY_SALT = 0x41A7
     }
 }

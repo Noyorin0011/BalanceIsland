@@ -15,6 +15,7 @@ enum class ProviderDisplayMode(val provider: Provider?) {
     PIN_OPENROUTER(Provider.OPENROUTER),
     PIN_SILICONFLOW(Provider.SILICONFLOW),
     PIN_MOONSHOT(Provider.MOONSHOT),
+    PIN_MIMO(Provider.MIMO),
     PIN_ANTHROPIC(Provider.ANTHROPIC),
     PIN_GEMINI(Provider.GEMINI),
     PIN_XAI(Provider.XAI)
@@ -177,6 +178,25 @@ class OverlayDisplayPreferences(context: Context) {
         notifyChanged()
     }
 
+    fun autoHideEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_HIDE_ENABLED, false)
+
+    fun setAutoHideEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_HIDE_ENABLED, enabled).apply()
+        notifyChanged()
+    }
+
+    fun autoHideMinutes(): Int =
+        prefs.getInt(KEY_AUTO_HIDE_MINUTES, DEFAULT_AUTO_HIDE_MINUTES)
+            .coerceIn(MIN_AUTO_HIDE_MINUTES, MAX_AUTO_HIDE_MINUTES)
+
+    fun setAutoHideMinutes(value: Int) {
+        prefs.edit().putInt(
+            KEY_AUTO_HIDE_MINUTES,
+            value.coerceIn(MIN_AUTO_HIDE_MINUTES, MAX_AUTO_HIDE_MINUTES)
+        ).apply()
+        notifyChanged()
+    }
+
     fun select(snapshots: List<BalanceSnapshot>): List<BalanceSnapshot> {
         val pinned = mode().provider
         return if (pinned == null) {
@@ -212,9 +232,14 @@ class OverlayDisplayPreferences(context: Context) {
         private const val KEY_HORIZONTAL_OFFSET_DP = "status_bar_horizontal_offset_dp"
         private const val KEY_VERTICAL_OFFSET_DP = "status_bar_vertical_adjustment_dp"
         private const val KEY_REFRESH_INTERVAL_MINUTES = "refresh_interval_minutes"
+        private const val KEY_AUTO_HIDE_ENABLED = "auto_hide_enabled"
+        private const val KEY_AUTO_HIDE_MINUTES = "auto_hide_minutes"
         private const val DEFAULT_REFRESH_INTERVAL_MINUTES = 1
         private const val MIN_REFRESH_INTERVAL_MINUTES = 1
         private const val MAX_REFRESH_INTERVAL_MINUTES = 1440
+        private const val DEFAULT_AUTO_HIDE_MINUTES = 30
+        private const val MIN_AUTO_HIDE_MINUTES = 5
+        private const val MAX_AUTO_HIDE_MINUTES = 1440
         const val ACTION_DISPLAY_SETTINGS_CHANGED =
             "com.noyorin.balanceisland.DISPLAY_SETTINGS_CHANGED"
     }

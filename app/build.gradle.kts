@@ -23,8 +23,8 @@ android {
         applicationId = "com.noyorin.balanceisland"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "0.7.5"
+        versionCode = 14
+        versionName = "0.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

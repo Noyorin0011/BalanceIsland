@@ -9,7 +9,7 @@
     <string name="tile_running">Running</string>
     <string name="tile_stopped">Stopped</string>
     <string name="screen_title">Status Bar Balance</string>
-    <string name="screen_subtitle">8 providers · background recovery · tiered alerts</string>
+    <string name="screen_subtitle">9 providers · background recovery · tiered alerts</string>
     <string name="section_account_status">Account status</string>
     <string name="section_api_accounts">API accounts</string>
     <string name="section_alerts">Alerts and manual balance</string>
@@ -100,6 +100,7 @@
     <string name="provider_help_openrouter">The balance endpoint requires a Management Key. Inference keys may return 403.</string>
     <string name="provider_help_siliconflow">Reads the total balance from the official /user/info endpoint.</string>
     <string name="provider_help_moonshot">A standard key reads the balance directly; Chinese CNY and international USD endpoints are detected automatically.</string>
+    <string name="provider_help_mimo">A pay-as-you-go sk- key is validated with the official model list. No public balance endpoint is available, so set a manual balance. tp- Token Plan keys are not supported.</string>
     <string name="provider_help_anthropic">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
     <string name="provider_help_gemini">Google AI Studio keys do not expose remaining balance. A manual balance can be set after validation.</string>
     <string name="provider_help_xai">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
@@ -136,6 +137,7 @@
     <string name="error_missing_credit">No credit data in the response</string>
     <string name="error_missing_account">No account data in the response</string>
     <string name="error_missing_recognizable_balance">No recognizable balance field in the response</string>
+    <string name="error_mimo_token_plan_unsupported">MiMo tp- Token Plan keys are limited to designated coding tools and cannot be validated in this app. Use a pay-as-you-go sk- key.</string>
     <string name="error_empty_response">The service returned an empty response</string>
     <string name="error_api">API error</string>
     <string name="error_network">Network connection failed. Try again later.</string>
@@ -149,4 +151,26 @@
     <string name="alert_channel_name">API balance alerts</string>
     <string name="alert_channel_description">Alerts when balance approaches or crosses the alert line, or drops by the configured step</string>
     <string name="list_separator">; </string>
+    <string name="auto_hide_title">Auto-hide and silent updates</string>
+    <string name="auto_hide_summary">Hide the bar after no changes, then restore it with a silent balance update</string>
+    <string name="auto_hide_timeout_label">Minutes without changes before hiding</string>
+    <string name="auto_hide_timeout_help">5–1440 minutes; startup and newly added accounts only establish a baseline</string>
+    <string name="save_refresh_settings">Save refresh and auto-hide settings</string>
+    <string name="change_notification_title">Balance updated</string>
+    <string name="change_notification_text">%1$s</string>
+    <string name="change_channel_name">Balance changes (silent)</string>
+    <string name="anomaly_alerts_title">Unusual change alerts</string>
+    <string name="anomaly_alerts_summary">Send a high-priority alert when a balance rises or falls beyond a threshold</string>
+    <string name="anomaly_threshold_label">Absolute change threshold</string>
+    <string name="anomaly_percent_label">Relative change threshold (percent)</string>
+    <string name="anomaly_mode_label">Detection mode</string>
+    <string name="anomaly_mode_absolute">Absolute threshold reached</string>
+    <string name="anomaly_mode_percent">Percentage threshold reached</string>
+    <string name="anomaly_mode_both">Either threshold reached</string>
+    <string name="anomaly_cooldown_label">Per-account alert cooldown (minutes)</string>
+    <string name="anomaly_cooldown_help">The baseline keeps updating during cooldown, but alerts are not repeated</string>
+    <string name="anomaly_title">%1$s · %2$s unusual change</string>
+    <string name="anomaly_content">Changed %2$s from %1$s (now %3$s)</string>
+    <string name="validation_anomaly_positive">Unusual-change thresholds must be greater than 0</string>
+    <string name="validation_anomaly_cooldown_positive">The unusual-change alert cooldown must be greater than 0</string>
 </resources>

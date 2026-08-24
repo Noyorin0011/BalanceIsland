@@ -87,6 +87,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noyorin.balanceisland.R
 import com.noyorin.balanceisland.data.AccountBalanceSettings
+import com.noyorin.balanceisland.data.AnomalyMode
 import com.noyorin.balanceisland.data.ApiKeySanitizer
 import com.noyorin.balanceisland.data.BalanceRepository
 import com.noyorin.balanceisland.data.BalanceSnapshot
@@ -145,6 +146,13 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        restoreOverlayIfRequested(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        restoreOverlayIfRequested(intent)
     }
 
     override fun onStart() {
@@ -180,6 +188,13 @@ class MainActivity : ComponentActivity() {
             )
         } else {
             IslandOverlayService.start(this)
+        }
+    }
+
+    private fun restoreOverlayIfRequested(intent: Intent?) {
+        if (intent?.getBooleanExtra(IslandOverlayService.EXTRA_RESTORE_OVERLAY, false) == true) {
+            intent.removeExtra(IslandOverlayService.EXTRA_RESTORE_OVERLAY)
+            IslandOverlayService.restore(this)
         }
     }
 
@@ -223,6 +238,10 @@ private fun BalanceIslandScreen(
     var textColor by remember { mutableStateOf(preferences.textColor()) }
     var refreshMinutes by rememberSaveable {
         mutableStateOf(preferences.refreshIntervalMinutes().toString())
+    }
+    var autoHideEnabled by remember { mutableStateOf(preferences.autoHideEnabled()) }
+    var autoHideMinutes by rememberSaveable {
+        mutableStateOf(preferences.autoHideMinutes().toString())
     }
     var autoRestart by remember { mutableStateOf(runtimePreferences.autoRestartEnabled()) }
     var language by remember { mutableStateOf(AppLanguagePreferences.current(context)) }
@@ -328,7 +347,14 @@ private fun BalanceIslandScreen(
                         rowProviders.forEach { provider ->
                             FilterChip(
                                 selected = selectedProvider == provider,
-                                onClick = { selectedProviderName = provider.name },
+                                onClick = {
+                                    if (selectedProvider != provider) {
+                                        selectedProviderName = provider.name
+                                        accountLabel = ""
+                                        apiKey = ""
+                                        showKey = false
+                                    }
+                                },
                                 leadingIcon = { ProviderLogo(provider, 20) },
                                 label = { Text(provider.displayName) },
                                 modifier = Modifier.weight(1f)
@@ -444,14 +470,46 @@ private fun BalanceIslandScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.auto_hide_title),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            stringResource(R.string.auto_hide_summary),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = autoHideEnabled,
+                        onCheckedChange = { autoHideEnabled = it }
+                    )
+                }
+                OutlinedTextField(
+                    value = autoHideMinutes,
+                    onValueChange = { autoHideMinutes = it.filter(Char::isDigit).take(4) },
+                    label = { Text(stringResource(R.string.auto_hide_timeout_label)) },
+                    supportingText = { Text(stringResource(R.string.auto_hide_timeout_help)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    enabled = autoHideEnabled,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Button(
                     onClick = {
                         val minutes = refreshMinutes.toIntOrNull()?.coerceIn(1, 1440) ?: 1
                         refreshMinutes = minutes.toString()
                         preferences.setRefreshIntervalMinutes(minutes)
+                        val hideMinutes = autoHideMinutes.toIntOrNull()
+                            ?.coerceIn(5, 1440) ?: 30
+                        autoHideMinutes = hideMinutes.toString()
+                        preferences.setAutoHideMinutes(hideMinutes)
+                        preferences.setAutoHideEnabled(autoHideEnabled)
                     },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text(stringResource(R.string.save_refresh_interval)) }
+                ) { Text(stringResource(R.string.save_refresh_settings)) }
                 Text(
                     stringResource(R.string.background_refresh_help),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -703,6 +761,21 @@ private fun AccountAlertEditor(
     var manualBalance by remember(summary.id, settings.manualBalance) {
         mutableStateOf(settings.manualBalance?.toString().orEmpty())
     }
+    var anomalyEnabled by remember(summary.id, settings.anomalyEnabled) {
+        mutableStateOf(settings.anomalyEnabled)
+    }
+    var anomalyThreshold by remember(summary.id, settings.anomalyThreshold) {
+        mutableStateOf(settings.anomalyThreshold.toString())
+    }
+    var anomalyPercentThreshold by remember(summary.id, settings.anomalyPercentThreshold) {
+        mutableStateOf(settings.anomalyPercentThreshold.toString())
+    }
+    var anomalyMode by remember(summary.id, settings.anomalyMode) {
+        mutableStateOf(settings.anomalyMode)
+    }
+    var anomalyCooldownMinutes by remember(summary.id, settings.anomalyCooldownMinutes) {
+        mutableStateOf(settings.anomalyCooldownMinutes.toString())
+    }
 
     Column(
         modifier = Modifier
@@ -745,6 +818,70 @@ private fun AccountAlertEditor(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.anomaly_alerts_title),
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    stringResource(R.string.anomaly_alerts_summary),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Switch(
+                checked = anomalyEnabled,
+                onCheckedChange = { anomalyEnabled = it },
+                enabled = enabled
+            )
+        }
+        if (anomalyEnabled) {
+            OutlinedTextField(
+                value = anomalyThreshold,
+                onValueChange = { anomalyThreshold = decimalInput(it) },
+                label = { Text(stringResource(R.string.anomaly_threshold_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = anomalyPercentThreshold,
+                onValueChange = { anomalyPercentThreshold = decimalInput(it) },
+                label = { Text(stringResource(R.string.anomaly_percent_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                stringResource(R.string.anomaly_mode_label),
+                style = MaterialTheme.typography.labelLarge
+            )
+            AnomalyMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = anomalyMode == mode,
+                    onClick = { anomalyMode = mode },
+                    label = { Text(mode.localizedLabel()) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            OutlinedTextField(
+                value = anomalyCooldownMinutes,
+                onValueChange = {
+                    anomalyCooldownMinutes = it.filter(Char::isDigit).take(5)
+                },
+                label = { Text(stringResource(R.string.anomaly_cooldown_label)) },
+                supportingText = { Text(stringResource(R.string.anomaly_cooldown_help)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        val anomalyValuesValid = !anomalyEnabled || (
+            (anomalyThreshold.toDoubleOrNull() ?: 0.0) > 0.0 &&
+                (anomalyPercentThreshold.toDoubleOrNull() ?: 0.0) > 0.0 &&
+                (anomalyCooldownMinutes.toIntOrNull() ?: 0) > 0
+            )
         Button(
             onClick = {
                 save(
@@ -753,12 +890,19 @@ private fun AccountAlertEditor(
                         alertEnabled = enabled,
                         warningLine = warningLine.toDoubleOrNull() ?: 20.0,
                         dropStep = dropStep.toDoubleOrNull() ?: 5.0,
-                        manualBalance = manualBalance.toDoubleOrNull()
+                        manualBalance = manualBalance.toDoubleOrNull(),
+                        anomalyEnabled = anomalyEnabled,
+                        anomalyThreshold = anomalyThreshold.toDoubleOrNull() ?: 50.0,
+                        anomalyPercentThreshold =
+                            anomalyPercentThreshold.toDoubleOrNull() ?: 50.0,
+                        anomalyMode = anomalyMode,
+                        anomalyCooldownMinutes = anomalyCooldownMinutes.toIntOrNull()
+                            ?.coerceIn(1, 10_080) ?: 1440
                     )
                 )
             },
             enabled = (warningLine.toDoubleOrNull() ?: 0.0) > 0.0 &&
-                (dropStep.toDoubleOrNull() ?: 0.0) > 0.0,
+                (dropStep.toDoubleOrNull() ?: 0.0) > 0.0 && anomalyValuesValid,
             modifier = Modifier.fillMaxWidth()
         ) { Text(stringResource(R.string.save_account_settings)) }
     }
@@ -928,6 +1072,7 @@ private fun ProviderLogo(provider: Provider, sizeDp: Int) {
                     Provider.OPENROUTER -> R.drawable.ic_provider_openrouter
                     Provider.SILICONFLOW -> R.drawable.ic_provider_siliconflow
                     Provider.MOONSHOT -> R.drawable.ic_provider_kimi
+                    Provider.MIMO -> R.drawable.ic_provider_mimo
                     Provider.ANTHROPIC -> R.drawable.ic_provider_anthropic
                     Provider.GEMINI -> R.drawable.ic_provider_gemini
                     Provider.XAI -> R.drawable.ic_provider_xai
@@ -998,6 +1143,15 @@ private fun BalanceContentMode.localizedLabel(): String = stringResource(
 )
 
 @Composable
+private fun AnomalyMode.localizedLabel(): String = stringResource(
+    when (this) {
+        AnomalyMode.ABSOLUTE -> R.string.anomaly_mode_absolute
+        AnomalyMode.PERCENT -> R.string.anomaly_mode_percent
+        AnomalyMode.BOTH -> R.string.anomaly_mode_both
+    }
+)
+
+@Composable
 private fun StatusBarTextColor.localizedLabel(): String = stringResource(
     when (this) {
         StatusBarTextColor.WHITE -> R.string.color_white
@@ -1028,6 +1182,7 @@ private fun providerHelp(provider: Provider): String = stringResource(
         Provider.OPENROUTER -> R.string.provider_help_openrouter
         Provider.SILICONFLOW -> R.string.provider_help_siliconflow
         Provider.MOONSHOT -> R.string.provider_help_moonshot
+        Provider.MIMO -> R.string.provider_help_mimo
         Provider.ANTHROPIC -> R.string.provider_help_anthropic
         Provider.GEMINI -> R.string.provider_help_gemini
         Provider.XAI -> R.string.provider_help_xai

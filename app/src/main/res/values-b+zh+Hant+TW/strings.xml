@@ -9,7 +9,7 @@
     <string name="tile_running">執行中</string>
     <string name="tile_stopped">已停止</string>
     <string name="screen_title">狀態列餘額</string>
-    <string name="screen_subtitle">8 家服務商・背景恢復・分級額度提醒</string>
+    <string name="screen_subtitle">9 家服務商・背景恢復・分級額度提醒</string>
     <string name="section_account_status">帳戶狀態</string>
     <string name="section_api_accounts">API 帳戶</string>
     <string name="section_alerts">額度提醒與手動餘額</string>
@@ -100,6 +100,7 @@
     <string name="provider_help_openrouter">餘額端點需要 Management Key；推論用 Key 可能回傳 403。</string>
     <string name="provider_help_siliconflow">透過官方 /user/info 端點讀取總餘額。</string>
     <string name="provider_help_moonshot">一般 Key 可直接讀取餘額；自動相容中國站人民幣與國際站美元。</string>
+    <string name="provider_help_mimo">一般按量 sk- Key 會透過官方模型清單驗證；沒有公開餘額端點，請設定手動餘額。不支援 Token Plan 的 tp- Key。</string>
     <string name="provider_help_anthropic">一般 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
     <string name="provider_help_gemini">Google AI Studio 的 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
     <string name="provider_help_xai">一般 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
@@ -136,6 +137,7 @@
     <string name="error_missing_credit">回應中沒有額度資料</string>
     <string name="error_missing_account">回應中沒有帳戶資料</string>
     <string name="error_missing_recognizable_balance">回應中沒有可辨識的餘額欄位</string>
+    <string name="error_mimo_token_plan_unsupported">MiMo Token Plan 的 tp- Key 僅限指定程式開發工具，無法在本應用程式驗證；請使用一般按量 sk- Key</string>
     <string name="error_empty_response">服務回傳空回應</string>
     <string name="error_api">API 錯誤</string>
     <string name="error_network">網路連線失敗，請稍後重試。</string>
@@ -149,4 +151,26 @@
     <string name="alert_channel_name">API 餘額提醒</string>
     <string name="alert_channel_description">餘額接近或低於警告線，或按設定步長下降時發出通知</string>
     <string name="list_separator">、</string>
+    <string name="auto_hide_title">自動隱藏與靜默提醒</string>
+    <string name="auto_hide_summary">長時間無變動時隱藏文字列，餘額變化時自動恢復並靜默提示</string>
+    <string name="auto_hide_timeout_label">無變動多少分鐘後隱藏</string>
+    <string name="auto_hide_timeout_help">可設定 5–1440 分鐘；首次啟動和新增帳戶只建立基準</string>
+    <string name="save_refresh_settings">儲存重新整理與自動隱藏設定</string>
+    <string name="change_notification_title">餘額已更新</string>
+    <string name="change_notification_text">%1$s</string>
+    <string name="change_channel_name">餘額變化（靜默）</string>
+    <string name="anomaly_alerts_title">異常變動警示</string>
+    <string name="anomaly_alerts_summary">餘額突增或突減超過門檻時發出高優先通知</string>
+    <string name="anomaly_threshold_label">絕對變動門檻</string>
+    <string name="anomaly_percent_label">相對變動門檻（百分比）</string>
+    <string name="anomaly_mode_label">判定方式</string>
+    <string name="anomaly_mode_absolute">達到絕對門檻</string>
+    <string name="anomaly_mode_percent">達到百分比門檻</string>
+    <string name="anomaly_mode_both">任一門檻達成</string>
+    <string name="anomaly_cooldown_label">同帳戶通知冷卻（分鐘）</string>
+    <string name="anomaly_cooldown_help">冷卻期間仍會更新比較基準，但不會重複通知</string>
+    <string name="anomaly_title">%1$s・%2$s 異常變動</string>
+    <string name="anomaly_content">較上次 %1$s 變動 %2$s（目前 %3$s）</string>
+    <string name="validation_anomaly_positive">異常變動門檻必須大於 0</string>
+    <string name="validation_anomaly_cooldown_positive">異常通知冷卻時間必須大於 0</string>
 </resources>

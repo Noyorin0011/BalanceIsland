@@ -9,7 +9,7 @@
     <string name="tile_running">실행 중</string>
     <string name="tile_stopped">중지됨</string>
     <string name="screen_title">상태 표시줄 잔액</string>
-    <string name="screen_subtitle">프로바이더 8개 · 백그라운드 복구 · 단계별 알림</string>
+    <string name="screen_subtitle">프로바이더 9개 · 백그라운드 복구 · 단계별 알림</string>
     <string name="section_account_status">계정 상태</string>
     <string name="section_api_accounts">API 계정</string>
     <string name="section_alerts">알림 및 수동 잔액</string>
@@ -100,6 +100,7 @@
     <string name="provider_help_openrouter">잔액 엔드포인트에는 Management Key가 필요합니다. 추론용 Key는 403을 반환할 수 있습니다.</string>
     <string name="provider_help_siliconflow">공식 /user/info 엔드포인트에서 총 잔액을 읽습니다.</string>
     <string name="provider_help_moonshot">일반 Key로 잔액을 직접 조회하며 중국 CNY와 국제 USD 엔드포인트를 자동 감지합니다.</string>
+    <string name="provider_help_mimo">종량제 sk- Key를 공식 모델 목록으로 검증합니다. 공개 잔액 API가 없으므로 수동 잔액을 설정하세요. Token Plan의 tp- Key는 지원하지 않습니다.</string>
     <string name="provider_help_anthropic">일반 Key는 남은 잔액을 제공하지 않습니다. 검증 후 수동 잔액을 설정할 수 있습니다.</string>
     <string name="provider_help_gemini">Google AI Studio Key는 남은 잔액을 제공하지 않습니다. 검증 후 수동 잔액을 설정할 수 있습니다.</string>
     <string name="provider_help_xai">일반 Key는 남은 잔액을 제공하지 않습니다. 검증 후 수동 잔액을 설정할 수 있습니다.</string>
@@ -136,6 +137,7 @@
     <string name="error_missing_credit">응답에 크레딧 데이터가 없습니다</string>
     <string name="error_missing_account">응답에 계정 데이터가 없습니다</string>
     <string name="error_missing_recognizable_balance">응답에 인식 가능한 잔액 필드가 없습니다</string>
+    <string name="error_mimo_token_plan_unsupported">MiMo Token Plan의 tp- Key는 지정된 코딩 도구 전용이므로 이 앱에서 검증할 수 없습니다. 종량제 sk- Key를 사용하세요.</string>
     <string name="error_empty_response">서비스가 빈 응답을 반환했습니다</string>
     <string name="error_api">API 오류</string>
     <string name="error_network">네트워크 연결에 실패했습니다. 나중에 다시 시도하세요.</string>
@@ -149,4 +151,26 @@
     <string name="alert_channel_name">API 잔액 알림</string>
     <string name="alert_channel_description">잔액이 경고선에 가까워지거나 경고선을 넘거나 설정한 단계만큼 하락할 때 알림</string>
     <string name="list_separator">, </string>
+    <string name="auto_hide_title">자동 숨김 및 무음 알림</string>
+    <string name="auto_hide_summary">변화가 오래 없으면 표시줄을 숨기고 잔액 변경 시 복원하여 조용히 알립니다</string>
+    <string name="auto_hide_timeout_label">변화 없이 숨기기까지의 시간(분)</string>
+    <string name="auto_hide_timeout_help">5~1440분. 첫 실행과 새 계정은 기준값만 설정합니다</string>
+    <string name="save_refresh_settings">새로고침 및 자동 숨김 설정 저장</string>
+    <string name="change_notification_title">잔액이 업데이트됨</string>
+    <string name="change_notification_text">%1$s</string>
+    <string name="change_channel_name">잔액 변경(무음)</string>
+    <string name="anomaly_alerts_title">이상 변동 알림</string>
+    <string name="anomaly_alerts_summary">잔액 급등 또는 급락이 임계값을 넘으면 높은 우선순위로 알립니다</string>
+    <string name="anomaly_threshold_label">절대 변동 임계값</string>
+    <string name="anomaly_percent_label">상대 변동 임계값(퍼센트)</string>
+    <string name="anomaly_mode_label">판정 방식</string>
+    <string name="anomaly_mode_absolute">절대 임계값 도달</string>
+    <string name="anomaly_mode_percent">퍼센트 임계값 도달</string>
+    <string name="anomaly_mode_both">둘 중 하나의 임계값 도달</string>
+    <string name="anomaly_cooldown_label">계정별 알림 대기 시간(분)</string>
+    <string name="anomaly_cooldown_help">대기 중에도 비교 기준은 갱신하지만 알림은 반복하지 않습니다</string>
+    <string name="anomaly_title">%1$s · %2$s 이상 변동</string>
+    <string name="anomaly_content">이전 %1$s에서 %2$s 변동(현재 %3$s)</string>
+    <string name="validation_anomaly_positive">이상 변동 임계값은 0보다 커야 합니다</string>
+    <string name="validation_anomaly_cooldown_positive">이상 변동 알림 대기 시간은 0보다 커야 합니다</string>
 </resources>
