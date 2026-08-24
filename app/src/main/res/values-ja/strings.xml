@@ -77,6 +77,9 @@
     <string name="position_right_edge">右上・端</string>
     <string name="style_text_only">テキストのみ</string>
     <string name="style_translucent_pill">半透明ピル</string>
+    <string name="style_outlined_text">自動コントラスト縁取り</string>
+    <string name="style_adaptive_pill">適応コントラスト背景</string>
+    <string name="style_readability_help">縁取りには文字と反対の明るさを自動使用します。適応背景は明るい文字には暗い背景、暗い文字には明るい背景を使用し、画面録画やユーザー補助権限は不要です。</string>
     <string name="color_white">ホワイト</string>
     <string name="color_mint">ミント</string>
     <string name="color_sky">スカイ</string>

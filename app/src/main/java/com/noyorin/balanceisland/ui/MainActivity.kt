@@ -65,7 +65,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -87,6 +90,7 @@ import com.noyorin.balanceisland.data.SnapshotStatus
 import com.noyorin.balanceisland.display.OverlayDisplayPreferences
 import com.noyorin.balanceisland.display.ProviderDisplayMode
 import com.noyorin.balanceisland.display.StatusBarPositionPreset
+import com.noyorin.balanceisland.display.StatusBarContrast
 import com.noyorin.balanceisland.display.StatusBarTextColor
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
 import com.noyorin.balanceisland.quicksettings.BalanceQuickSettingsTileService
@@ -535,6 +539,11 @@ private fun BalanceIslandScreen(
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
+                Text(
+                    stringResource(R.string.style_readability_help),
+                    color = Color(0xFF9CA3AF),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             ExpandableSection(stringResource(R.string.section_background), initiallyExpanded = true) {
@@ -741,6 +750,20 @@ private fun StatusBarPreview(
         SnapshotStatus.ERROR -> Color(0xFFFF6470)
         else -> Color(configuredColor.argb)
     }
+    val previewBackground = when (visualStyle) {
+        StatusBarVisualStyle.TRANSLUCENT_PILL -> Color(0x99000000)
+        StatusBarVisualStyle.ADAPTIVE_PILL ->
+            Color(StatusBarContrast.backgroundColorFor(displayColor.toArgb()))
+        StatusBarVisualStyle.TEXT_ONLY,
+        StatusBarVisualStyle.OUTLINED_TEXT -> Color.Transparent
+    }
+    val previewShadow = if (visualStyle == StatusBarVisualStyle.OUTLINED_TEXT) {
+        Shadow(
+            color = Color(StatusBarContrast.outlineColorFor(displayColor.toArgb())),
+            offset = Offset.Zero,
+            blurRadius = 2.7f
+        )
+    } else null
 
     Box(
         modifier = Modifier
@@ -752,8 +775,7 @@ private fun StatusBarPreview(
         Row(
             modifier = Modifier
                 .background(
-                    if (visualStyle == StatusBarVisualStyle.TRANSLUCENT_PILL) Color(0x99000000)
-                    else Color.Transparent,
+                    previewBackground,
                     RoundedCornerShape(14.dp)
                 )
                 .padding(horizontal = 6.dp, vertical = 3.dp),
@@ -764,7 +786,7 @@ private fun StatusBarPreview(
             Text(
                 if (snapshot == null) stringResource(R.string.configure_api) else "$qualifier ${snapshot.primaryText}",
                 color = displayColor,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall.copy(shadow = previewShadow)
             )
         }
     }
@@ -893,8 +915,12 @@ private fun StatusBarPositionPreset.localizedLabel(): String = stringResource(
 
 @Composable
 private fun StatusBarVisualStyle.localizedLabel(): String = stringResource(
-    if (this == StatusBarVisualStyle.TEXT_ONLY) R.string.style_text_only
-    else R.string.style_translucent_pill
+    when (this) {
+        StatusBarVisualStyle.TEXT_ONLY -> R.string.style_text_only
+        StatusBarVisualStyle.TRANSLUCENT_PILL -> R.string.style_translucent_pill
+        StatusBarVisualStyle.OUTLINED_TEXT -> R.string.style_outlined_text
+        StatusBarVisualStyle.ADAPTIVE_PILL -> R.string.style_adaptive_pill
+    }
 )
 
 @Composable

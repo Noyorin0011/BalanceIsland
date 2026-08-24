@@ -18,7 +18,7 @@
 - 点按文字条立即切换账户，长按返回设置。
 - 左上/右上圆角安全区、左上/右上贴边四种预设。
 - 圆角安全预设读取 Android DisplayCutout、RoundedCorner 和状态栏 Insets，并保留通用最小侧边空间。
-- 透明文字与半透明底两种样式，内置五种文字颜色。
+- 透明文字、半透明底、自动对比描边和自适应对比底色四种样式，内置五种文字颜色；亮色文字自动配深色对比效果，暗色文字自动配浅色对比效果。
 - 文字条运行时默认每 1 分钟查询，可自定义 `1–1440` 分钟。
 - 每账户独立额度警告：余额小于等于警告线 `×1.5` 时橙色，越过警告线时红色并推送。
 - 每账户独立下降步进通知，默认每下降 `5` 个货币单位提醒一次。
@@ -83,8 +83,9 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 4. 展开“刷新频率与通知”，设置 1–1440 分钟查询间隔。
 5. 在“显示账户”选择自动轮播或固定某个已配置服务商。
 6. 在“后台运行与控制中心”可打开自动恢复，并添加“余额监控”磁贴。
-7. 在“位置预设”选择左/右圆角安全区，点击“启动文字条”并授予权限。
-8. 若位置与系统图标重叠，用水平/垂直滑块微调；点按切换账户，长按打开设置。
+7. 在“文字样式”中选择透明文字、半透明底、自动对比描边或自适应对比底色。
+8. 在“位置预设”选择左/右圆角安全区，点击“启动文字条”并授予权限。
+9. 若位置与系统图标重叠，用水平/垂直滑块微调；点按切换账户，长按打开设置。
 
 ## 通用设备适配
 
@@ -104,6 +105,7 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - 构建使用 JDK 17、Gradle 8.11.1、Android SDK 35，并先校验全部五套语言资源。
 - 非 PR 构建会读取 `ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`，额外生成正式签名 Release APK；PR 不接触这些 Secrets。
 - APK 在对应 Actions 运行页的 `Artifacts` 区域下载：Debug 默认保留 14 天，签名 Release 默认保留 30 天。
+- 非 PR 构建成功后还会更新与当前 `versionName` 对应的 Debug Preview Release（例如 `v0.7.2-debug`）：删除其中旧 APK，并上传本次新构建的 `BalanceIsland-v<version>-debug.apk`。
 - Debug APK 只适合测试；对外发布和覆盖升级应始终使用同一套 Release Keystore 签名的 APK。
 
 ## 安全说明

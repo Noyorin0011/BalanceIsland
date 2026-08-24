@@ -37,6 +37,7 @@ import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.Provider
 import com.noyorin.balanceisland.data.SnapshotStatus
 import com.noyorin.balanceisland.display.OverlayDisplayPreferences
+import com.noyorin.balanceisland.display.StatusBarContrast
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
 import com.noyorin.balanceisland.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
@@ -209,10 +210,26 @@ class IslandOverlayService : Service() {
         val snapshots = visibleSnapshots()
         if (snapshots.isNotEmpty()) visibleAccountIndex %= snapshots.size else visibleAccountIndex = 0
         val configuredTextColor = displayPreferences.textColor().argb
-        val translucent = displayPreferences.visualStyle() == StatusBarVisualStyle.TRANSLUCENT_PILL
-        root.background = if (translucent) roundedBackground(Color.argb(158, 0, 0, 0), 14f) else null
-        root.elevation = if (translucent) dp(5).toFloat() else 0f
-        root.setPadding(dp(if (translucent) 6 else 1), 0, dp(if (translucent) 6 else 1), 0)
+        val visualStyle = displayPreferences.visualStyle()
+        val snapshot = snapshots.getOrNull(visibleAccountIndex)
+        val displayTextColor = when (snapshot?.status) {
+            SnapshotStatus.CRITICAL -> Color.rgb(255, 82, 96)
+            SnapshotStatus.WARNING -> Color.rgb(255, 166, 61)
+            SnapshotStatus.ERROR -> Color.rgb(255, 100, 112)
+            else -> configuredTextColor
+        }
+        val hasBackground = visualStyle == StatusBarVisualStyle.TRANSLUCENT_PILL ||
+            visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL
+        root.background = when (visualStyle) {
+            StatusBarVisualStyle.TRANSLUCENT_PILL ->
+                roundedBackground(Color.argb(158, 0, 0, 0), 14f)
+            StatusBarVisualStyle.ADAPTIVE_PILL ->
+                roundedBackground(StatusBarContrast.backgroundColorFor(displayTextColor), 14f)
+            StatusBarVisualStyle.TEXT_ONLY,
+            StatusBarVisualStyle.OUTLINED_TEXT -> null
+        }
+        root.elevation = if (hasBackground) dp(5).toFloat() else 0f
+        root.setPadding(dp(if (hasBackground) 6 else 1), 0, dp(if (hasBackground) 6 else 1), 0)
         root.removeAllViews()
 
         val row = LinearLayout(this).apply {
@@ -221,20 +238,29 @@ class IslandOverlayService : Service() {
         }
         if (snapshots.isEmpty()) {
             row.addView(providerIcon(null), linearParams(dp(17), dp(17)))
-            row.addView(statusText(strings.getString(R.string.configure_api), configuredTextColor))
+            row.addView(
+                statusText(
+                    strings.getString(R.string.configure_api),
+                    configuredTextColor,
+                    outlined = visualStyle == StatusBarVisualStyle.OUTLINED_TEXT
+                )
+            )
         } else {
-            val snapshot = snapshots[visibleAccountIndex]
-            val textColor = when (snapshot.status) {
-                SnapshotStatus.CRITICAL -> Color.rgb(255, 82, 96)
-                SnapshotStatus.WARNING -> Color.rgb(255, 166, 61)
-                else -> configuredTextColor
-            }
+            checkNotNull(snapshot)
+            val outlined = visualStyle == StatusBarVisualStyle.OUTLINED_TEXT
             row.addView(providerIcon(snapshot.provider), linearParams(dp(17), dp(17)))
             val sameProviderCount = snapshots.count { it.provider == snapshot.provider }
             if (sameProviderCount > 1 || snapshot.accountLabel.isNotBlank()) {
-                row.addView(statusText("［${snapshot.accountDisplayLabel}］", textColor, 10.5f))
+                row.addView(
+                    statusText(
+                        "［${snapshot.accountDisplayLabel}］",
+                        displayTextColor,
+                        10.5f,
+                        outlined
+                    )
+                )
             }
-            row.addView(statusText(" ${snapshot.primaryText}", textColor, 11.5f).apply {
+            row.addView(statusText(" ${snapshot.primaryText}", displayTextColor, 11.5f, outlined).apply {
                 maxWidth = dp(STATUS_BAR_MAX_WIDTH_DP)
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
@@ -284,12 +310,25 @@ class IslandOverlayService : Service() {
         }
     }
 
-    private fun statusText(value: String, color: Int, sizeSp: Float = 12f) = TextView(this).apply {
+    private fun statusText(
+        value: String,
+        color: Int,
+        sizeSp: Float = 12f,
+        outlined: Boolean = false
+    ) = TextView(this).apply {
         text = value
         setTextColor(color)
         textSize = sizeSp
         gravity = Gravity.CENTER_VERTICAL
         includeFontPadding = false
+        if (outlined) {
+            setShadowLayer(
+                1.35f * resources.displayMetrics.density,
+                0f,
+                0f,
+                StatusBarContrast.outlineColorFor(color)
+            )
+        }
     }
 
     private fun showNextAccount() {

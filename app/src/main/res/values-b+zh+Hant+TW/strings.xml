@@ -77,6 +77,9 @@
     <string name="position_right_edge">右上・貼邊</string>
     <string name="style_text_only">僅文字</string>
     <string name="style_translucent_pill">半透明底</string>
+    <string name="style_outlined_text">自動對比描邊</string>
+    <string name="style_adaptive_pill">自適應對比底色</string>
+    <string name="style_readability_help">描邊會自動使用相反明暗顏色；自適應底色會為亮色文字使用深底、暗色文字使用淺底，不需要螢幕錄製或無障礙權限。</string>
     <string name="color_white">白色</string>
     <string name="color_mint">薄荷</string>
     <string name="color_sky">天空藍</string>

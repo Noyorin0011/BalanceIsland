@@ -77,6 +77,9 @@
     <string name="position_right_edge">오른쪽 위 · 가장자리</string>
     <string name="style_text_only">텍스트만</string>
     <string name="style_translucent_pill">반투명 알약</string>
+    <string name="style_outlined_text">자동 대비 외곽선</string>
+    <string name="style_adaptive_pill">적응형 대비 배경</string>
+    <string name="style_readability_help">외곽선은 텍스트와 반대 밝기를 자동으로 사용합니다. 적응형 배경은 밝은 텍스트에 어두운 배경을, 어두운 텍스트에 밝은 배경을 사용하며 화면 캡처나 접근성 권한이 필요하지 않습니다.</string>
     <string name="color_white">화이트</string>
     <string name="color_mint">민트</string>
     <string name="color_sky">스카이</string>

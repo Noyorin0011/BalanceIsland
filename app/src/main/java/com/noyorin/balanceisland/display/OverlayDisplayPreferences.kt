@@ -29,7 +29,36 @@ enum class StatusBarPositionPreset(
 
 enum class StatusBarVisualStyle {
     TEXT_ONLY,
-    TRANSLUCENT_PILL
+    TRANSLUCENT_PILL,
+    OUTLINED_TEXT,
+    ADAPTIVE_PILL
+}
+
+/** Contrast helpers shared by the settings preview and the real overlay. */
+object StatusBarContrast {
+    fun isLight(argb: Int): Boolean {
+        val red = ColorChannel.red(argb) / 255.0
+        val green = ColorChannel.green(argb) / 255.0
+        val blue = ColorChannel.blue(argb) / 255.0
+        val luminance = 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+        return luminance >= 0.42
+    }
+
+    fun outlineColorFor(textColor: Int): Int =
+        if (isLight(textColor)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+
+    fun backgroundColorFor(textColor: Int): Int =
+        if (isLight(textColor)) 0xB8000000.toInt() else 0xD9FFFFFF.toInt()
+
+    private fun linear(channel: Double): Double =
+        if (channel <= 0.04045) channel / 12.92
+        else Math.pow((channel + 0.055) / 1.055, 2.4)
+
+    private object ColorChannel {
+        fun red(color: Int) = color shr 16 and 0xFF
+        fun green(color: Int) = color shr 8 and 0xFF
+        fun blue(color: Int) = color and 0xFF
+    }
 }
 
 enum class StatusBarTextColor(val argb: Int) {

@@ -77,6 +77,9 @@
     <string name="position_right_edge">Top right · edge</string>
     <string name="style_text_only">Text only</string>
     <string name="style_translucent_pill">Translucent pill</string>
+    <string name="style_outlined_text">Automatic contrast outline</string>
+    <string name="style_adaptive_pill">Adaptive contrast background</string>
+    <string name="style_readability_help">The outline automatically uses the opposite lightness. The adaptive background uses a dark backing for light text and a light backing for dark text, without screen capture or accessibility permission.</string>
     <string name="color_white">White</string>
     <string name="color_mint">Mint</string>
     <string name="color_sky">Sky</string>
