@@ -69,7 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' app/build.gradle.kts | head -n 1)"
+          version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*$/\1/p' app/build.gradle.kts | head -n 1 | tr -d '\r')"
           test -n "$version_name"
 
           expected_tag="v${version_name}-debug"
@@ -145,7 +145,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' app/build.gradle.kts | head -n 1)"
+          version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*$/\1/p' app/build.gradle.kts | head -n 1 | tr -d '\r')"
           test -n "$version_name"
 
           expected_tag="v${version_name}"
