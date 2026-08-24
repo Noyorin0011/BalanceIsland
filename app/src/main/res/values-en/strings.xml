@@ -170,7 +170,7 @@
     <string name="anomaly_cooldown_label">Per-account alert cooldown (minutes)</string>
     <string name="anomaly_cooldown_help">The baseline keeps updating during cooldown, but alerts are not repeated</string>
     <string name="anomaly_title">%1$s · %2$s unusual change</string>
-    <string name="anomaly_content">Changed %2$s from %1$s (now %3$s)</string>
+    <string name="anomaly_content">From %1$s, changed %2$s (now %3$s)</string>
     <string name="validation_anomaly_positive">Unusual-change thresholds must be greater than 0</string>
     <string name="validation_anomaly_cooldown_positive">The unusual-change alert cooldown must be greater than 0</string>
 </resources>
