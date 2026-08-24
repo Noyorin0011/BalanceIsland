@@ -114,6 +114,8 @@ data class BalanceSnapshot(
 
 data class AccountBalanceSettings(
     val credentialId: String,
+    /** 0 follows the provider-specific automatic policy. */
+    val refreshIntervalMinutes: Int = 0,
     val alertEnabled: Boolean = true,
     val warningLine: Double = 20.0,
     val dropStep: Double = 5.0,

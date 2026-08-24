@@ -38,7 +38,9 @@
     <string name="add_account_first">請先新增 API 帳戶，即可個別設定。</string>
     <string name="alert_rule_help">餘額 ≤ 警告線 ×1.5 時變橘色；餘額 ≤ 警告線時變紅色並發出通知。下降提醒預設為每 5 個貨幣單位一次。</string>
     <string name="refresh_interval_label">更新間隔（分鐘）</string>
-    <string name="refresh_interval_help">範圍：1–1440；預設值：1。文字條執行期間生效。</string>
+    <string name="refresh_interval_help">排程器依此週期檢查；每個帳戶只會在自己的更新週期到期時連線。</string>
+    <string name="account_refresh_interval_label">此帳戶更新間隔（分鐘）</string>
+    <string name="account_refresh_interval_help">填 0 使用自動策略（此服務商建議 %1$d 分鐘）；可設定 1–1440。遇到 HTTP 429 會自動延長。</string>
     <string name="save_refresh_interval">儲存更新間隔</string>
     <string name="background_refresh_help">各家廠商的省電政策可能延遲背景工作。請允許此應用程式在背景執行，並關閉電池最佳化。</string>
     <string name="display_rotation_help">自動及群組模式每 5 秒輪播；點按文字條可立即切換。</string>
@@ -90,7 +92,8 @@
     <string name="style_translucent_pill">半透明底</string>
     <string name="style_outlined_text">自動對比描邊</string>
     <string name="style_adaptive_pill">自適應對比底色</string>
-    <string name="style_readability_help">描邊會自動使用相反明暗顏色；自適應底色會為亮色文字使用深底、暗色文字使用淺底，不需要螢幕錄製或無障礙權限。</string>
+    <string name="style_adaptive_text">跟隨系統明暗文字</string>
+    <string name="style_readability_help">跟隨系統模式會在淺色系統使用深色文字、深色系統使用白色文字；Android 不允許一般懸浮窗讀取其他應用程式的背景像素，因此不會逐應用程式取色。描邊已增加繪製留白避免末字裁切；自適應底色在任何頁面更穩定。</string>
     <string name="color_white">白色</string>
     <string name="color_mint">薄荷</string>
     <string name="color_sky">天空藍</string>
@@ -104,7 +107,7 @@
     <string name="provider_help_openrouter">餘額端點需要 Management Key；推論用 Key 可能回傳 403。</string>
     <string name="provider_help_siliconflow">透過官方 /user/info 端點讀取總餘額。</string>
     <string name="provider_help_moonshot">一般 Key 可直接讀取餘額；自動相容中國站人民幣與國際站美元。</string>
-    <string name="provider_help_mimo">一般按量 sk- Key 會透過官方模型清單驗證；沒有公開餘額端點，請設定手動餘額。不支援 Token Plan 的 tp- Key。</string>
+    <string name="provider_help_mimo">一般按量 sk- Key 會透過官方模型清單驗證。餘額與用量可在 MiMo 主控台查看，但沒有公開查詢 API，請設定手動餘額。不支援 Token Plan 的 tp- Key。</string>
     <string name="provider_help_anthropic">一般 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
     <string name="provider_help_gemini">支援新版 AQ. 與舊版 AIza Key。免費層和後付費沒有固定剩餘餘額，可留空並僅顯示 Key 有效；預付費可從 AI Studio 的「用量和限制」抄入可用餘額。</string>
     <string name="provider_help_xai">一般 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
@@ -117,9 +120,12 @@
     <string name="validation_warning_positive">警告線必須大於 0</string>
     <string name="validation_drop_positive">下降提醒的步長必須大於 0</string>
     <string name="validation_manual_nonnegative">手動餘額不可為負數</string>
+    <string name="validation_refresh_interval">更新間隔必須為 0（自動）或 1–1440 分鐘</string>
     <string name="snapshot_waiting">等待中</string>
     <string name="snapshot_tap_refresh">點按立即更新</string>
     <string name="snapshot_query_failed">查詢失敗</string>
+    <string name="snapshot_query_deferred">暫緩查詢</string>
+    <string name="snapshot_rate_limited_retry">要求頻率受限，約 %1$d 分鐘後自動重試</string>
     <string name="snapshot_topup_grant">儲值 %1$s・贈送 %2$s</string>
     <string name="snapshot_available">%1$s 可用</string>
     <string name="snapshot_month_used_limit">本月已用 %1$s／上限 %2$s</string>

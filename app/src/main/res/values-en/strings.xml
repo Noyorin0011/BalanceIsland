@@ -38,7 +38,9 @@
     <string name="add_account_first">Add an API account to configure it.</string>
     <string name="alert_rule_help">Orange at balance ≤ alert line ×1.5; red and a notification at balance ≤ alert line. Drop alerts default to every 5 currency units.</string>
     <string name="refresh_interval_label">Refresh interval (minutes)</string>
-    <string name="refresh_interval_help">Range: 1–1440; default: 1. Active while the overlay is running.</string>
+    <string name="refresh_interval_help">The scheduler checks at this cadence; each account connects only when its own interval is due.</string>
+    <string name="account_refresh_interval_label">Account refresh interval (minutes)</string>
+    <string name="account_refresh_interval_help">Enter 0 for automatic (%1$d minutes recommended for this provider), or 1–1440. HTTP 429 responses extend it automatically.</string>
     <string name="save_refresh_interval">Save refresh interval</string>
     <string name="background_refresh_help">Vendor battery policies may delay background work. Allow background activity and disable battery optimization for this app.</string>
     <string name="display_rotation_help">Auto and custom-group modes rotate every 5 seconds. Tap the overlay to switch immediately.</string>
@@ -90,7 +92,8 @@
     <string name="style_translucent_pill">Translucent pill</string>
     <string name="style_outlined_text">Automatic contrast outline</string>
     <string name="style_adaptive_pill">Adaptive contrast background</string>
-    <string name="style_readability_help">The outline automatically uses the opposite lightness. The adaptive background uses a dark backing for light text and a light backing for dark text, without screen capture or accessibility permission.</string>
+    <string name="style_adaptive_text">Follow system light/dark text</string>
+    <string name="style_readability_help">System-following text is dark in light mode and white in dark mode. Android does not let a normal overlay sample another app’s pixels, so it cannot adapt per app. The outline now has extra draw inset to prevent final-glyph clipping; the adaptive background remains the most reliable option.</string>
     <string name="color_white">White</string>
     <string name="color_mint">Mint</string>
     <string name="color_sky">Sky</string>
@@ -104,7 +107,7 @@
     <string name="provider_help_openrouter">The balance endpoint requires a Management Key. Inference keys may return 403.</string>
     <string name="provider_help_siliconflow">Reads the total balance from the official /user/info endpoint.</string>
     <string name="provider_help_moonshot">A standard key reads the balance directly; Chinese CNY and international USD endpoints are detected automatically.</string>
-    <string name="provider_help_mimo">A pay-as-you-go sk- key is validated with the official model list. No public balance endpoint is available, so set a manual balance. tp- Token Plan keys are not supported.</string>
+    <string name="provider_help_mimo">A pay-as-you-go sk- key is validated with the official model list. Balance and usage are visible in the MiMo console, but no public query API is available, so set a manual balance. tp- Token Plan keys are not supported.</string>
     <string name="provider_help_anthropic">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
     <string name="provider_help_gemini">Supports new AQ. and legacy AIza keys. Free and postpaid plans have no fixed remaining balance, so leave manual balance empty and show key validity only. Prepaid users can copy available credit from AI Studio Usage and Limits.</string>
     <string name="provider_help_xai">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
@@ -117,9 +120,12 @@
     <string name="validation_warning_positive">The alert line must be greater than 0</string>
     <string name="validation_drop_positive">The drop alert step must be greater than 0</string>
     <string name="validation_manual_nonnegative">Manual balance cannot be negative</string>
+    <string name="validation_refresh_interval">Refresh interval must be 0 (automatic) or 1–1440 minutes</string>
     <string name="snapshot_waiting">Waiting</string>
     <string name="snapshot_tap_refresh">Tap to refresh now</string>
     <string name="snapshot_query_failed">Query failed</string>
+    <string name="snapshot_query_deferred">Query deferred</string>
+    <string name="snapshot_rate_limited_retry">Rate limited; retrying automatically in about %1$d minute(s)</string>
     <string name="snapshot_topup_grant">Top-up %1$s · grant %2$s</string>
     <string name="snapshot_available">%1$s available</string>
     <string name="snapshot_month_used_limit">Used this month %1$s / limit %2$s</string>

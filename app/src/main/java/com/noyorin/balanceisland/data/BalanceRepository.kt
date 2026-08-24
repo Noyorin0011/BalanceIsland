@@ -6,6 +6,8 @@ import com.noyorin.balanceisland.R
 import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,6 +15,8 @@ import org.json.JSONObject
 import java.io.IOException
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -22,6 +26,7 @@ class BalanceRepository(private val context: Context) {
     private val snapshots = SnapshotStore(context)
     private val accountSettings = AccountSettingsStore(context)
     private val dailyUsage = DailyUsageStore(context)
+    private val refreshSchedule = RefreshScheduleStore(context)
     private val alertNotifier = BalanceAlertNotifier(context)
     private val client = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
@@ -29,26 +34,52 @@ class BalanceRepository(private val context: Context) {
         .callTimeout(25, TimeUnit.SECONDS)
         .build()
 
-    suspend fun refreshAll(): List<BalanceSnapshot> = withContext(Dispatchers.IO) {
-        val rawResult = keys.credentials().map(::refreshOne)
-        rawResult.forEach(snapshots::save)
-        val result = rawResult.map(::applyUserSettings)
-        result.forEach(alertNotifier::evaluate)
-        context.sendBroadcast(Intent(ACTION_BALANCE_UPDATED).setPackage(context.packageName))
-        result
+    suspend fun refreshAll(
+        force: Boolean = false,
+        targetCredentialId: String? = null
+    ): List<BalanceSnapshot> = withContext(Dispatchers.IO) {
+        refreshMutex.withLock {
+            val rawResult = keys.credentials().map { credential ->
+                if (targetCredentialId != null && credential.id != targetCredentialId) {
+                    snapshots.get(credential)
+                } else {
+                    refreshOne(credential, force)
+                }
+            }
+            rawResult.forEach(snapshots::save)
+            val result = rawResult.map(::applyUserSettings)
+            result.forEach(alertNotifier::evaluate)
+            context.sendBroadcast(Intent(ACTION_BALANCE_UPDATED).setPackage(context.packageName))
+            result
+        }
     }
 
     fun cached(): List<BalanceSnapshot> = keys.credentials()
         .map(snapshots::get)
         .map(::applyUserSettings)
 
+    fun schedulerHeartbeatMinutes(configuredMinutes: Int): Int {
+        val accountIntervals = keys.credentials().map(::effectiveRefreshIntervalMinutes)
+        return (accountIntervals + configuredMinutes.coerceIn(1, 1_440)).minOrNull() ?: 1
+    }
+
     fun removeCached(credentialId: String) {
         snapshots.remove(credentialId)
         dailyUsage.remove(credentialId)
+        refreshSchedule.remove(credentialId)
     }
 
-    private fun refreshOne(credential: ApiCredential): BalanceSnapshot {
-        val raw = runCatching {
+    private fun refreshOne(credential: ApiCredential, force: Boolean): BalanceSnapshot {
+        val intervalMinutes = effectiveRefreshIntervalMinutes(credential)
+        if (!refreshSchedule.shouldAttempt(credential.id, intervalMinutes, force)) {
+            return if (refreshSchedule.isRateLimited(credential.id)) {
+                rateLimitedSnapshot(credential, refreshSchedule.rateLimitUntil(credential.id))
+            } else {
+                snapshots.get(credential)
+            }
+        }
+        refreshSchedule.markAttempt(credential.id)
+        val raw = try {
             when (credential.provider) {
                 Provider.DEEPSEEK -> fetchDeepSeek(credential)
                 Provider.OPENAI -> if (credential.apiKey.startsWith(OPENAI_ADMIN_KEY_PREFIX)) {
@@ -64,7 +95,16 @@ class BalanceRepository(private val context: Context) {
                 Provider.GEMINI -> verifyGeminiKey(credential)
                 Provider.XAI -> verifyBearerKey(credential, "https://api.x.ai/v1/models")
             }
-        }.getOrElse { throwable ->
+        } catch (throwable: Throwable) {
+            if (throwable is ApiException && throwable.statusCode == 429) {
+                val retryAt = refreshSchedule.recordRateLimit(
+                    credentialId = credential.id,
+                    intervalMinutes = intervalMinutes,
+                    retryAfterMillis = throwable.retryAfterMillis
+                )
+                return rateLimitedSnapshot(credential, retryAt)
+            }
+            refreshSchedule.recordFailure(credential.id, intervalMinutes)
             BalanceSnapshot(
                 provider = credential.provider,
                 credentialId = credential.id,
@@ -79,7 +119,48 @@ class BalanceRepository(private val context: Context) {
                 updatedAtEpochMillis = System.currentTimeMillis()
             )
         }
+        refreshSchedule.recordSuccess(credential.id, intervalMinutes)
         return attachDailyUsage(raw)
+    }
+
+    private fun effectiveRefreshIntervalMinutes(credential: ApiCredential): Int {
+        val configured = accountSettings.get(credential.id).refreshIntervalMinutes
+        return if (configured > 0) configured else recommendedRefreshIntervalMinutes(credential.provider)
+    }
+
+    private fun rateLimitedSnapshot(
+        credential: ApiCredential,
+        retryAtEpochMillis: Long
+    ): BalanceSnapshot {
+        val remainingMinutes = ((retryAtEpochMillis - System.currentTimeMillis()) / 60_000.0)
+            .let(kotlin.math::ceil)
+            .toInt()
+            .coerceAtLeast(1)
+        val cached = snapshots.get(credential)
+        val retryMessage = text(R.string.snapshot_rate_limited_retry, remainingMinutes)
+        return if (cached.updatedAtEpochMillis > 0L) {
+            cached.copy(
+                secondaryText = retryMessage,
+                status = when (cached.status) {
+                    SnapshotStatus.CRITICAL -> SnapshotStatus.CRITICAL
+                    else -> SnapshotStatus.WARNING
+                }
+            )
+        } else {
+            BalanceSnapshot(
+                provider = credential.provider,
+                credentialId = credential.id,
+                accountLabel = credential.label,
+                keySuffix = credential.keySuffix,
+                primaryText = text(R.string.snapshot_query_deferred),
+                secondaryText = retryMessage,
+                balanceAmount = null,
+                currencyCode = credential.provider.defaultCurrency,
+                isManualBalance = false,
+                status = SnapshotStatus.WARNING,
+                updatedAtEpochMillis = System.currentTimeMillis()
+            )
+        }
     }
 
     private fun fetchDeepSeek(credential: ApiCredential): BalanceSnapshot {
@@ -415,12 +496,28 @@ class BalanceRepository(private val context: Context) {
                     JSONObject(body).optJSONObject("error")?.optString("message")
                 }.getOrNull().orEmpty()
                 throw ApiException(
-                    if (message.isBlank()) "HTTP ${response.code}" else "HTTP ${response.code}: $message"
+                    message = if (message.isBlank()) {
+                        "HTTP ${response.code}"
+                    } else {
+                        "HTTP ${response.code}: $message"
+                    },
+                    statusCode = response.code,
+                    retryAfterMillis = response.header("Retry-After")?.let(::parseRetryAfterMillis)
                 )
             }
             if (body.isBlank()) throw ApiException(text(R.string.error_empty_response))
             JSONObject(body)
         }
+    }
+
+    private fun parseRetryAfterMillis(value: String): Long? {
+        value.trim().toLongOrNull()?.let { return it.coerceAtLeast(1L) * 1_000L }
+        return runCatching {
+            val retryAt = ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME)
+                .toInstant()
+                .toEpochMilli()
+            (retryAt - System.currentTimeMillis()).coerceAtLeast(1_000L)
+        }.getOrNull()
     }
 
     private fun readableError(throwable: Throwable): String = when (throwable) {
@@ -445,17 +542,34 @@ class BalanceRepository(private val context: Context) {
         }
     }
 
-    private class ApiException(message: String) : Exception(message)
+    private class ApiException(
+        message: String,
+        val statusCode: Int? = null,
+        val retryAfterMillis: Long? = null
+    ) : Exception(message)
 
     companion object {
         private const val NEAR_LINE_MULTIPLIER = 1.5
         private const val OPENAI_ADMIN_KEY_PREFIX = "sk-admin-"
         private const val MIMO_TOKEN_PLAN_KEY_PREFIX = "tp-"
+        private val refreshMutex = Mutex()
         private val LOCALLY_TRACKED_PROVIDERS = setOf(
             Provider.DEEPSEEK,
             Provider.MOONSHOT,
             Provider.SILICONFLOW
         )
         const val ACTION_BALANCE_UPDATED = "com.noyorin.balanceisland.BALANCE_UPDATED"
+
+        fun recommendedRefreshIntervalMinutes(provider: Provider): Int = when (provider) {
+            Provider.DEEPSEEK -> 1
+            Provider.OPENAI -> 5
+            Provider.OPENROUTER,
+            Provider.SILICONFLOW,
+            Provider.MOONSHOT -> 2
+            Provider.MIMO,
+            Provider.ANTHROPIC,
+            Provider.GEMINI,
+            Provider.XAI -> 15
+        }
     }
 }

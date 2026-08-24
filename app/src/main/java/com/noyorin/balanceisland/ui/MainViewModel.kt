@@ -42,7 +42,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
-    fun addCredential(provider: Provider, label: String, apiKey: String) {
+    fun addCredential(
+        provider: Provider,
+        label: String,
+        apiKey: String,
+        refreshIntervalMinutes: Int
+    ) {
         val cleanedKey = ApiKeySanitizer.clean(apiKey)
         if (cleanedKey.isBlank()) {
             _uiState.value = _uiState.value.copy(message = text(R.string.message_key_empty))
@@ -56,6 +61,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         val savedCredential = saveResult.getOrThrow()
+        val previousSettings = accountSettingsStore.get(savedCredential.id)
+        accountSettingsStore.save(
+            previousSettings.copy(refreshIntervalMinutes = refreshIntervalMinutes)
+        )
         _uiState.value = _uiState.value.copy(
             credentials = keys.summaries(),
             snapshots = repository.cached(),
@@ -65,7 +74,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             keyCheckError = null
         )
         viewModelScope.launch {
-            val result = repository.refreshAll()
+            val result = repository.refreshAll(
+                force = true,
+                targetCredentialId = savedCredential.id
+            )
             val tested = result.firstOrNull { it.credentialId == savedCredential.id }
             if (tested?.status == SnapshotStatus.ERROR) {
                 _uiState.value = _uiState.value.copy(
@@ -119,7 +131,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_uiState.value.refreshing && messageOnSuccess == null) return
         _uiState.value = _uiState.value.copy(refreshing = true, message = null)
         viewModelScope.launch {
-            val result = repository.refreshAll()
+            val result = repository.refreshAll(force = true)
             _uiState.value = _uiState.value.copy(
                 credentials = keys.summaries(),
                 snapshots = result,

@@ -232,6 +232,7 @@ private fun BalanceIslandScreen(
     val selectedProvider = Provider.valueOf(selectedProviderName)
     var accountLabel by rememberSaveable { mutableStateOf("") }
     var apiKey by rememberSaveable { mutableStateOf("") }
+    var accountRefreshMinutes by rememberSaveable { mutableStateOf("0") }
     var showKey by rememberSaveable { mutableStateOf(false) }
     var displayMode by remember { mutableStateOf(preferences.mode()) }
     var providerGroup by remember { mutableStateOf(preferences.providerGroup()) }
@@ -270,6 +271,7 @@ private fun BalanceIslandScreen(
         if (state.credentialSaveEvent > 0) {
             accountLabel = ""
             apiKey = ""
+            accountRefreshMinutes = "0"
         }
     }
 
@@ -370,6 +372,7 @@ private fun BalanceIslandScreen(
                                         selectedProviderName = provider.name
                                         accountLabel = ""
                                         apiKey = ""
+                                        accountRefreshMinutes = "0"
                                         showKey = false
                                     }
                                 },
@@ -439,13 +442,40 @@ private fun BalanceIslandScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
+                OutlinedTextField(
+                    value = accountRefreshMinutes,
+                    onValueChange = {
+                        accountRefreshMinutes = it.filter(Char::isDigit).take(4)
+                    },
+                    label = { Text(stringResource(R.string.account_refresh_interval_label)) },
+                    supportingText = {
+                        Text(
+                            stringResource(
+                                R.string.account_refresh_interval_help,
+                                BalanceRepository.recommendedRefreshIntervalMinutes(selectedProvider)
+                            )
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = { showKey = !showKey }, modifier = Modifier.weight(1f)) {
                         Text(stringResource(if (showKey) R.string.hide_key else R.string.show_key))
                     }
                     Button(
                         onClick = {
-                            viewModel.addCredential(selectedProvider, accountLabel, apiKey)
+                            val minutes = accountRefreshMinutes.toIntOrNull()
+                                ?.let { if (it == 0) 0 else it.coerceIn(1, 1440) }
+                                ?: 0
+                            accountRefreshMinutes = minutes.toString()
+                            viewModel.addCredential(
+                                selectedProvider,
+                                accountLabel,
+                                apiKey,
+                                minutes
+                            )
                         },
                         enabled = apiKey.isNotBlank() && !state.refreshing,
                         modifier = Modifier.weight(1f)
@@ -680,6 +710,7 @@ private fun BalanceIslandScreen(
                 StatusBarTextColor.entries.forEach { preset ->
                     FilterChip(
                         selected = textColor == preset,
+                        enabled = visualStyle != StatusBarVisualStyle.ADAPTIVE_TEXT,
                         onClick = {
                             textColor = preset
                             preferences.setTextColor(preset)
@@ -824,6 +855,9 @@ private fun AccountAlertEditor(
     settings: AccountBalanceSettings,
     save: (AccountBalanceSettings) -> Unit
 ) {
+    var refreshIntervalMinutes by remember(summary.id, settings.refreshIntervalMinutes) {
+        mutableStateOf(settings.refreshIntervalMinutes.toString())
+    }
     var enabled by remember(summary.id, settings.alertEnabled) { mutableStateOf(settings.alertEnabled) }
     var warningLine by remember(summary.id, settings.warningLine) { mutableStateOf(settings.warningLine.toString()) }
     var dropStep by remember(summary.id, settings.dropStep) { mutableStateOf(settings.dropStep.toString()) }
@@ -862,6 +896,24 @@ private fun AccountAlertEditor(
             )
             Switch(checked = enabled, onCheckedChange = { enabled = it })
         }
+        OutlinedTextField(
+            value = refreshIntervalMinutes,
+            onValueChange = {
+                refreshIntervalMinutes = it.filter(Char::isDigit).take(4)
+            },
+            label = { Text(stringResource(R.string.account_refresh_interval_label)) },
+            supportingText = {
+                Text(
+                    stringResource(
+                        R.string.account_refresh_interval_help,
+                        BalanceRepository.recommendedRefreshIntervalMinutes(summary.provider)
+                    )
+                )
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
         OutlinedTextField(
             value = warningLine,
             onValueChange = { warningLine = decimalInput(it) },
@@ -956,6 +1008,9 @@ private fun AccountAlertEditor(
                 save(
                     AccountBalanceSettings(
                         credentialId = summary.id,
+                        refreshIntervalMinutes = refreshIntervalMinutes.toIntOrNull()
+                            ?.let { if (it == 0) 0 else it.coerceIn(1, 1440) }
+                            ?: 0,
                         alertEnabled = enabled,
                         warningLine = warningLine.toDoubleOrNull() ?: 20.0,
                         dropStep = dropStep.toDoubleOrNull() ?: 5.0,
@@ -993,18 +1048,24 @@ private fun StatusBarPreview(
     val qualifier = if (snapshot != null &&
         (sameProviderCount > 1 || snapshot.accountLabel.isNotBlank())
     ) "［${snapshot.accountDisplayLabel}］" else ""
+    val normalPreviewColor = if (visualStyle == StatusBarVisualStyle.ADAPTIVE_TEXT) {
+        Color(StatusBarContrast.textColorForNightMode(isSystemInDarkTheme()))
+    } else {
+        Color(configuredColor.argb)
+    }
     val displayColor = when (snapshot?.status) {
         SnapshotStatus.WARNING -> Color(0xFFFFA63D)
         SnapshotStatus.CRITICAL -> Color(0xFFFF5260)
         SnapshotStatus.ERROR -> Color(0xFFFF6470)
-        else -> Color(configuredColor.argb)
+        else -> normalPreviewColor
     }
     val previewBackground = when (visualStyle) {
         StatusBarVisualStyle.TRANSLUCENT_PILL -> Color(0x99000000)
         StatusBarVisualStyle.ADAPTIVE_PILL ->
             Color(StatusBarContrast.backgroundColorFor(displayColor.toArgb()))
         StatusBarVisualStyle.TEXT_ONLY,
-        StatusBarVisualStyle.OUTLINED_TEXT -> Color.Transparent
+        StatusBarVisualStyle.OUTLINED_TEXT,
+        StatusBarVisualStyle.ADAPTIVE_TEXT -> Color.Transparent
     }
     val previewShadow = if (visualStyle == StatusBarVisualStyle.OUTLINED_TEXT) {
         Shadow(
@@ -1025,9 +1086,14 @@ private fun StatusBarPreview(
             modifier = Modifier
                 .background(
                     previewBackground,
-                    RoundedCornerShape(14.dp)
+                    RoundedCornerShape(
+                        if (visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL) 6.dp else 14.dp
+                    )
                 )
-                .padding(horizontal = 6.dp, vertical = 3.dp),
+                .padding(
+                    horizontal = if (visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL) 4.dp else 6.dp,
+                    vertical = if (visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL) 1.dp else 3.dp
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (snapshot != null) ProviderLogo(snapshot.provider, 18)
@@ -1205,6 +1271,7 @@ private fun StatusBarVisualStyle.localizedLabel(): String = stringResource(
         StatusBarVisualStyle.TRANSLUCENT_PILL -> R.string.style_translucent_pill
         StatusBarVisualStyle.OUTLINED_TEXT -> R.string.style_outlined_text
         StatusBarVisualStyle.ADAPTIVE_PILL -> R.string.style_adaptive_pill
+        StatusBarVisualStyle.ADAPTIVE_TEXT -> R.string.style_adaptive_text
     }
 )
 

@@ -38,7 +38,9 @@
     <string name="add_account_first">API アカウントを追加すると設定できます。</string>
     <string name="alert_rule_help">残高 ≤ 警告ライン ×1.5 でオレンジ、残高 ≤ 警告ラインで赤になり通知されます。下落通知は既定で 5 通貨単位ごとです。</string>
     <string name="refresh_interval_label">更新間隔（分）</string>
-    <string name="refresh_interval_help">範囲：1〜1440、既定値：1。オーバーレイ実行中に有効です。</string>
+    <string name="refresh_interval_help">スケジューラはこの間隔で確認し、各アカウントは個別の更新時刻になった場合のみ接続します。</string>
+    <string name="account_refresh_interval_label">このアカウントの更新間隔（分）</string>
+    <string name="account_refresh_interval_help">0 は自動（このプロバイダーの推奨は %1$d 分）、または 1〜1440。HTTP 429 の場合は自動的に延長します。</string>
     <string name="save_refresh_interval">更新間隔を保存</string>
     <string name="background_refresh_help">メーカーの省電力ポリシーによりバックグラウンド処理が遅れる場合があります。このアプリのバックグラウンド動作を許可し、バッテリー最適化を無効にしてください。</string>
     <string name="display_rotation_help">自動モードとカスタムグループは 5 秒ごとに切り替わります。オーバーレイをタップするとすぐに切り替わります。</string>
@@ -90,7 +92,8 @@
     <string name="style_translucent_pill">半透明ピル</string>
     <string name="style_outlined_text">自動コントラスト縁取り</string>
     <string name="style_adaptive_pill">適応コントラスト背景</string>
-    <string name="style_readability_help">縁取りには文字と反対の明るさを自動使用します。適応背景は明るい文字には暗い背景、暗い文字には明るい背景を使用し、画面録画やユーザー補助権限は不要です。</string>
+    <string name="style_adaptive_text">システムの明暗に追従する文字</string>
+    <string name="style_readability_help">システム追従文字はライトモードで濃色、ダークモードで白になります。通常の Android オーバーレイは他アプリの背景ピクセルを取得できないため、アプリごとの自動判定は行いません。縁取りには末尾切れ防止の余白を追加済みで、適応背景が最も安定します。</string>
     <string name="color_white">ホワイト</string>
     <string name="color_mint">ミント</string>
     <string name="color_sky">スカイ</string>
@@ -104,7 +107,7 @@
     <string name="provider_help_openrouter">残高エンドポイントには Management Key が必要です。推論用 Key では 403 が返される場合があります。</string>
     <string name="provider_help_siliconflow">公式の /user/info エンドポイントから総残高を読み取ります。</string>
     <string name="provider_help_moonshot">通常の Key で残高を直接取得できます。中国版の人民元と国際版の米ドルを自動判定します。</string>
-    <string name="provider_help_mimo">従量課金の sk- Key を公式モデル一覧で検証します。公開残高 API はないため手動残高を設定してください。Token Plan の tp- Key は非対応です。</string>
+    <string name="provider_help_mimo">従量課金の sk- Key を公式モデル一覧で検証します。残高と使用量は MiMo コンソールで確認できますが、公開照会 API はないため手動残高を設定してください。Token Plan の tp- Key は非対応です。</string>
     <string name="provider_help_anthropic">通常の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
     <string name="provider_help_gemini">新しい AQ. Key と従来の AIza Key に対応します。無料枠と後払いには固定の残高がないため、手動残高は空欄のまま Key の有効性のみ表示できます。前払いでは AI Studio の「使用量と上限」から利用可能クレジットを転記できます。</string>
     <string name="provider_help_xai">通常の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
@@ -117,9 +120,12 @@
     <string name="validation_warning_positive">警告ラインは 0 より大きくなければなりません</string>
     <string name="validation_drop_positive">下落通知のステップは 0 より大きくなければなりません</string>
     <string name="validation_manual_nonnegative">手動残高を負の値にすることはできません</string>
+    <string name="validation_refresh_interval">更新間隔は 0（自動）または 1〜1440 分にしてください</string>
     <string name="snapshot_waiting">待機中</string>
     <string name="snapshot_tap_refresh">タップして更新</string>
     <string name="snapshot_query_failed">照会失敗</string>
+    <string name="snapshot_query_deferred">照会を延期</string>
+    <string name="snapshot_rate_limited_retry">レート制限中。約 %1$d 分後に自動再試行します</string>
     <string name="snapshot_topup_grant">チャージ %1$s・付与 %2$s</string>
     <string name="snapshot_available">%1$s 利用可能</string>
     <string name="snapshot_month_used_limit">今月の利用 %1$s／上限 %2$s</string>

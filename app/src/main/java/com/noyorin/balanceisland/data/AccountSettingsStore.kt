@@ -19,6 +19,8 @@ class AccountSettingsStore(context: Context) {
             val json = JSONObject(raw)
             AccountBalanceSettings(
                 credentialId = credentialId,
+                refreshIntervalMinutes = json.optInt("refreshIntervalMinutes", 0)
+                    .let { if (it == 0) 0 else it.coerceIn(MIN_REFRESH_MINUTES, MAX_REFRESH_MINUTES) },
                 alertEnabled = json.optBoolean("alertEnabled", true),
                 warningLine = json.optDouble("warningLine", DEFAULT_WARNING_LINE)
                     .coerceAtLeast(MIN_POSITIVE_VALUE),
@@ -54,6 +56,10 @@ class AccountSettingsStore(context: Context) {
     }
 
     fun save(settings: AccountBalanceSettings) {
+        require(
+            settings.refreshIntervalMinutes == 0 ||
+                settings.refreshIntervalMinutes in MIN_REFRESH_MINUTES..MAX_REFRESH_MINUTES
+        ) { strings.getString(R.string.validation_refresh_interval) }
         require(settings.warningLine > 0.0) { strings.getString(R.string.validation_warning_positive) }
         require(settings.dropStep > 0.0) { strings.getString(R.string.validation_drop_positive) }
         require(settings.manualBalance == null || settings.manualBalance >= 0.0) {
@@ -70,6 +76,7 @@ class AccountSettingsStore(context: Context) {
             strings.getString(R.string.validation_anomaly_cooldown_positive)
         }
         val json = JSONObject()
+            .put("refreshIntervalMinutes", settings.refreshIntervalMinutes)
             .put("alertEnabled", settings.alertEnabled)
             .put("warningLine", settings.warningLine)
             .put("dropStep", settings.dropStep)
@@ -146,5 +153,7 @@ class AccountSettingsStore(context: Context) {
         private const val MIN_POSITIVE_VALUE = 0.01
         private const val MIN_COOLDOWN_MINUTES = 1
         private const val MAX_COOLDOWN_MINUTES = 10_080
+        private const val MIN_REFRESH_MINUTES = 1
+        private const val MAX_REFRESH_MINUTES = 1_440
     }
 }

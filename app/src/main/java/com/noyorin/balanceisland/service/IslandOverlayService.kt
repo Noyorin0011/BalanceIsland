@@ -11,10 +11,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import com.noyorin.balanceisland.localization.AppLanguagePreferences
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -79,6 +81,7 @@ class IslandOverlayService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BalanceRepository.ACTION_BALANCE_UPDATED) {
                 observeVisibleBalances()
+                scheduleNextRefresh()
             }
             applyPosition()
             render()
@@ -257,24 +260,49 @@ class IslandOverlayService : Service() {
         val configuredTextColor = displayPreferences.textColor().argb
         val visualStyle = displayPreferences.visualStyle()
         val snapshot = snapshots.getOrNull(visibleAccountIndex)
+        val normalTextColor = if (visualStyle == StatusBarVisualStyle.ADAPTIVE_TEXT) {
+            StatusBarContrast.textColorForNightMode(
+                (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                    Configuration.UI_MODE_NIGHT_YES
+            )
+        } else {
+            configuredTextColor
+        }
         val displayTextColor = when (snapshot?.status) {
             SnapshotStatus.CRITICAL -> Color.rgb(255, 82, 96)
             SnapshotStatus.WARNING -> Color.rgb(255, 166, 61)
             SnapshotStatus.ERROR -> Color.rgb(255, 100, 112)
-            else -> configuredTextColor
+            else -> normalTextColor
         }
-        val hasBackground = visualStyle == StatusBarVisualStyle.TRANSLUCENT_PILL ||
-            visualStyle == StatusBarVisualStyle.ADAPTIVE_PILL
         root.background = when (visualStyle) {
             StatusBarVisualStyle.TRANSLUCENT_PILL ->
                 roundedBackground(Color.argb(158, 0, 0, 0), 14f)
             StatusBarVisualStyle.ADAPTIVE_PILL ->
-                roundedBackground(StatusBarContrast.backgroundColorFor(displayTextColor), 14f)
+                InsetDrawable(
+                    roundedBackground(
+                        StatusBarContrast.backgroundColorFor(displayTextColor),
+                        ADAPTIVE_BACKGROUND_RADIUS_DP
+                    ),
+                    0,
+                    dp(ADAPTIVE_BACKGROUND_VERTICAL_INSET_DP),
+                    0,
+                    dp(ADAPTIVE_BACKGROUND_VERTICAL_INSET_DP)
+                )
             StatusBarVisualStyle.TEXT_ONLY,
-            StatusBarVisualStyle.OUTLINED_TEXT -> null
+            StatusBarVisualStyle.OUTLINED_TEXT,
+            StatusBarVisualStyle.ADAPTIVE_TEXT -> null
         }
-        root.elevation = if (hasBackground) dp(5).toFloat() else 0f
-        root.setPadding(dp(if (hasBackground) 6 else 1), 0, dp(if (hasBackground) 6 else 1), 0)
+        root.elevation = when (visualStyle) {
+            StatusBarVisualStyle.TRANSLUCENT_PILL -> dp(5).toFloat()
+            StatusBarVisualStyle.ADAPTIVE_PILL -> dp(2).toFloat()
+            else -> 0f
+        }
+        val horizontalPadding = when (visualStyle) {
+            StatusBarVisualStyle.TRANSLUCENT_PILL -> 6
+            StatusBarVisualStyle.ADAPTIVE_PILL -> 4
+            else -> 1
+        }
+        root.setPadding(dp(horizontalPadding), 0, dp(horizontalPadding), 0)
         root.removeAllViews()
 
         val row = LinearLayout(this).apply {
@@ -286,7 +314,7 @@ class IslandOverlayService : Service() {
             row.addView(
                 statusText(
                     strings.getString(R.string.configure_api),
-                    configuredTextColor,
+                    normalTextColor,
                     outlined = visualStyle == StatusBarVisualStyle.OUTLINED_TEXT
                 )
             )
@@ -371,6 +399,8 @@ class IslandOverlayService : Service() {
         gravity = Gravity.CENTER_VERTICAL
         includeFontPadding = false
         if (outlined) {
+            // Shadow-based outlines need their own draw inset or the final glyph is clipped.
+            setPadding(dp(2), 0, dp(2), 0)
             setShadowLayer(
                 1.35f * resources.displayMetrics.density,
                 0f,
@@ -486,7 +516,9 @@ class IslandOverlayService : Service() {
 
     private fun scheduleNextRefresh() {
         handler.removeCallbacks(refreshRunnable)
-        val delay = displayPreferences.refreshIntervalMinutes() * 60_000L
+        val delay = repository.schedulerHeartbeatMinutes(
+            displayPreferences.refreshIntervalMinutes()
+        ) * 60_000L
         handler.postDelayed(refreshRunnable, delay)
     }
 
@@ -608,6 +640,8 @@ class IslandOverlayService : Service() {
         private const val ROTATE_INTERVAL_MS = 5_000L
         private const val HIDE_CHECK_INTERVAL_MS = 30_000L
         private const val STATUS_BAR_TEXT_HEIGHT_DP = 26
+        private const val ADAPTIVE_BACKGROUND_RADIUS_DP = 6f
+        private const val ADAPTIVE_BACKGROUND_VERTICAL_INSET_DP = 2
         private const val FALLBACK_STATUS_BAR_HEIGHT_DP = 28
         private const val MIN_SAFE_INSET_DP = 16
         private const val MIN_EDGE_INSET_DP = 4
