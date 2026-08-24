@@ -26,7 +26,7 @@ enum class Provider(
         "SiliconFlow", "CNY", "SiliconFlow API Key", "sk-...", BalanceCapability.DIRECT_BALANCE
     ),
     MOONSHOT(
-        "Kimi / Moonshot", "CNY", "Moonshot API Key", "sk-...", BalanceCapability.KEY_CHECK_ONLY
+        "Kimi / Moonshot", "CNY", "Moonshot API Key", "sk-...", BalanceCapability.DIRECT_BALANCE
     ),
     ANTHROPIC(
         "Anthropic", "USD", "Anthropic API Key", "sk-ant-...", BalanceCapability.KEY_CHECK_ONLY
@@ -76,7 +76,9 @@ data class BalanceSnapshot(
     val currencyCode: String,
     val isManualBalance: Boolean,
     val status: SnapshotStatus,
-    val updatedAtEpochMillis: Long
+    val updatedAtEpochMillis: Long,
+    val todayUsedAmount: Double? = null,
+    val todayUsageIsEstimated: Boolean = false
 ) {
     val accountDisplayLabel: String
         get() = accountLabel.ifBlank { "••••$keySuffix" }

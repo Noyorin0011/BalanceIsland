@@ -20,6 +20,8 @@ class SnapshotStore(context: Context) {
             .put("isManualBalance", snapshot.isManualBalance)
             .put("status", snapshot.status.name)
             .put("updatedAt", snapshot.updatedAtEpochMillis)
+            .put("todayUsedAmount", snapshot.todayUsedAmount ?: JSONObject.NULL)
+            .put("todayUsageIsEstimated", snapshot.todayUsageIsEstimated)
         prefs.edit().putString(keyFor(snapshot.credentialId), json.toString()).apply()
     }
 
@@ -44,7 +46,10 @@ class SnapshotStore(context: Context) {
                 ),
                 isManualBalance = json.optBoolean("isManualBalance", false),
                 status = SnapshotStatus.valueOf(json.getString("status")),
-                updatedAtEpochMillis = json.optLong("updatedAt", 0L)
+                updatedAtEpochMillis = json.optLong("updatedAt", 0L),
+                todayUsedAmount = if (json.isNull("todayUsedAmount")) null
+                else json.optDouble("todayUsedAmount").takeIf(Double::isFinite),
+                todayUsageIsEstimated = json.optBoolean("todayUsageIsEstimated", false)
             )
         }.getOrElse { BalanceSnapshot.waiting(appContext, credential) }
     }

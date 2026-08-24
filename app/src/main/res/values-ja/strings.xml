@@ -15,6 +15,7 @@
     <string name="section_alerts">アラートと手動残高</string>
     <string name="section_refresh">更新と通知</string>
     <string name="section_display_accounts">表示するアカウント</string>
+    <string name="section_display_content">表示内容</string>
     <string name="section_position">位置プリセット</string>
     <string name="section_style">文字スタイル</string>
     <string name="section_background">バックグラウンドとクイック設定</string>
@@ -41,6 +42,12 @@
     <string name="save_refresh_interval">更新間隔を保存</string>
     <string name="background_refresh_help">メーカーの省電力ポリシーによりバックグラウンド処理が遅れる場合があります。このアプリのバックグラウンド動作を許可し、バッテリー最適化を無効にしてください。</string>
     <string name="display_rotation_help">自動モードは 5 秒ごとに切り替わります。オーバーレイをタップするとすぐに切り替わります。</string>
+    <string name="content_balance_only">残高のみ</string>
+    <string name="content_today_balance">本日の使用額 / 残高</string>
+    <string name="content_auto_rotate">残高と本日の使用額を交互表示</string>
+    <string name="content_mode_help">公式の日次使用額を優先します。DeepSeek、Moonshot、SiliconFlow は保存した残高差から推定し、プロセス復帰後に停止中の減少分を補算します。</string>
+    <string name="status_today_balance">今日%1$s/残%2$s</string>
+    <string name="status_today_estimated">今日約%1$s/残%2$s</string>
     <string name="horizontal_offset">追加の水平オフセット：%1$d dp</string>
     <string name="vertical_offset">画面上端からの距離：%1$d dp</string>
     <string name="safe_area_help">安全プリセットはシステムの切り欠きと角丸のインセットを読み取り、最小限の側面余白を確保します。</string>
@@ -92,7 +99,7 @@
     <string name="openai_project_key_detected">Project Key を検出：Key の検証は行いますが、残高の自動照会は行いません。</string>
     <string name="provider_help_openrouter">残高エンドポイントには Management Key が必要です。推論用 Key では 403 が返される場合があります。</string>
     <string name="provider_help_siliconflow">公式の /user/info エンドポイントから総残高を読み取ります。</string>
-    <string name="provider_help_moonshot">通常の Key は検証のみです。アカウント設定で手動残高を入力してください。</string>
+    <string name="provider_help_moonshot">通常の Key で残高を直接取得できます。中国版の人民元と国際版の米ドルを自動判定します。</string>
     <string name="provider_help_anthropic">通常の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
     <string name="provider_help_gemini">Google AI Studio の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
     <string name="provider_help_xai">通常の Key では残高を取得できません。検証後に手動残高を設定できます。</string>
@@ -117,6 +124,9 @@
     <string name="snapshot_topup">チャージ %1$s</string>
     <string name="snapshot_grant">付与 %1$s</string>
     <string name="snapshot_official_total">公式アカウントの総残高</string>
+    <string name="snapshot_cash_voucher">現金 %1$s · クーポン %2$s</string>
+    <string name="snapshot_today_used">本日の使用額 %1$s</string>
+    <string name="snapshot_today_estimated">本日の推定使用額 %1$s（端末内の残高差）</string>
     <string name="snapshot_key_valid">Key 有効</string>
     <string name="snapshot_manual_required">このプロバイダーは通常の API Key に残高を公開していません。手動残高を設定してください。</string>
     <string name="snapshot_manual_status">手動残高・API ステータス：%1$s</string>

@@ -87,6 +87,8 @@ import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.CredentialSummary
 import com.noyorin.balanceisland.data.Provider
 import com.noyorin.balanceisland.data.SnapshotStatus
+import com.noyorin.balanceisland.display.BalanceContentMode
+import com.noyorin.balanceisland.display.BalanceTextFormatter
 import com.noyorin.balanceisland.display.OverlayDisplayPreferences
 import com.noyorin.balanceisland.display.ProviderDisplayMode
 import com.noyorin.balanceisland.display.StatusBarPositionPreset
@@ -211,6 +213,7 @@ private fun BalanceIslandScreen(
     var displayMode by remember { mutableStateOf(preferences.mode()) }
     var position by remember { mutableStateOf(preferences.position()) }
     var visualStyle by remember { mutableStateOf(preferences.visualStyle()) }
+    var contentMode by remember { mutableStateOf(preferences.contentMode()) }
     var textColor by remember { mutableStateOf(preferences.textColor()) }
     var refreshMinutes by rememberSaveable {
         mutableStateOf(preferences.refreshIntervalMinutes().toString())
@@ -280,7 +283,7 @@ private fun BalanceIslandScreen(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            StatusBarPreview(state.snapshots, visualStyle, textColor)
+            StatusBarPreview(state.snapshots, visualStyle, textColor, contentMode)
 
             ExpandableSection(stringResource(R.string.section_account_status), initiallyExpanded = true) {
                 if (state.snapshots.isEmpty()) {
@@ -465,6 +468,25 @@ private fun BalanceIslandScreen(
                 }
                 Text(
                     stringResource(R.string.display_rotation_help),
+                    color = Color(0xFF9CA3AF),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            ExpandableSection(stringResource(R.string.section_display_content)) {
+                BalanceContentMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = contentMode == mode,
+                        onClick = {
+                            contentMode = mode
+                            preferences.setContentMode(mode)
+                        },
+                        label = { Text(mode.localizedLabel()) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                Text(
+                    stringResource(R.string.content_mode_help),
                     color = Color(0xFF9CA3AF),
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -735,8 +757,10 @@ private fun AccountAlertEditor(
 private fun StatusBarPreview(
     snapshots: List<BalanceSnapshot>,
     visualStyle: StatusBarVisualStyle,
-    configuredColor: StatusBarTextColor
+    configuredColor: StatusBarTextColor,
+    contentMode: BalanceContentMode
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val snapshot = snapshots.firstOrNull()
     val sameProviderCount = snapshot?.let { selected ->
         snapshots.count { it.provider == selected.provider }
@@ -784,7 +808,12 @@ private fun StatusBarPreview(
             if (snapshot != null) ProviderLogo(snapshot.provider, 18)
             else Box(Modifier.size(18.dp).background(Color(0xFFFFBE46), CircleShape))
             Text(
-                if (snapshot == null) stringResource(R.string.configure_api) else "$qualifier ${snapshot.primaryText}",
+                if (snapshot == null) {
+                    stringResource(R.string.configure_api)
+                } else {
+                    val showToday = contentMode != BalanceContentMode.BALANCE_ONLY
+                    "$qualifier ${BalanceTextFormatter.compact(context, snapshot, showToday)}"
+                },
                 color = displayColor,
                 style = MaterialTheme.typography.bodySmall.copy(shadow = previewShadow)
             )
@@ -827,6 +856,20 @@ private fun SnapshotRow(snapshot: BalanceSnapshot) {
                 fontWeight = FontWeight.SemiBold
             )
             Text(snapshot.secondaryText, color = Color(0xFF9CA3AF), style = MaterialTheme.typography.bodySmall)
+            snapshot.todayUsedAmount?.let { amount ->
+                Text(
+                    stringResource(
+                        if (snapshot.todayUsageIsEstimated) {
+                            R.string.snapshot_today_estimated
+                        } else {
+                            R.string.snapshot_today_used
+                        },
+                        BalanceTextFormatter.amount(snapshot.currencyCode, amount)
+                    ),
+                    color = Color(0xFF7FCAFF),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             if (snapshot.updatedAtEpochMillis > 0) {
                 Text(
                     SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
@@ -920,6 +963,15 @@ private fun StatusBarVisualStyle.localizedLabel(): String = stringResource(
         StatusBarVisualStyle.TRANSLUCENT_PILL -> R.string.style_translucent_pill
         StatusBarVisualStyle.OUTLINED_TEXT -> R.string.style_outlined_text
         StatusBarVisualStyle.ADAPTIVE_PILL -> R.string.style_adaptive_pill
+    }
+)
+
+@Composable
+private fun BalanceContentMode.localizedLabel(): String = stringResource(
+    when (this) {
+        BalanceContentMode.BALANCE_ONLY -> R.string.content_balance_only
+        BalanceContentMode.TODAY_AND_BALANCE -> R.string.content_today_balance
+        BalanceContentMode.AUTO_ROTATE -> R.string.content_auto_rotate
     }
 )
 

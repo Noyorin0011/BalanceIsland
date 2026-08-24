@@ -2,8 +2,11 @@ package com.noyorin.balanceisland.display
 
 import android.content.Context
 import android.content.Intent
+import com.noyorin.balanceisland.R
 import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.Provider
+import com.noyorin.balanceisland.localization.AppLanguagePreferences
+import java.util.Locale
 
 enum class ProviderDisplayMode(val provider: Provider?) {
     AUTO_CONFIGURED(null),
@@ -32,6 +35,41 @@ enum class StatusBarVisualStyle {
     TRANSLUCENT_PILL,
     OUTLINED_TEXT,
     ADAPTIVE_PILL
+}
+
+enum class BalanceContentMode {
+    BALANCE_ONLY,
+    TODAY_AND_BALANCE,
+    AUTO_ROTATE
+}
+
+object BalanceTextFormatter {
+    fun compact(context: Context, snapshot: BalanceSnapshot, showToday: Boolean): String {
+        val todayUsed = snapshot.todayUsedAmount
+        val balance = snapshot.balanceAmount
+        if (!showToday || todayUsed == null || balance == null) return snapshot.primaryText
+        val strings = AppLanguagePreferences.wrap(context)
+        val format = if (snapshot.todayUsageIsEstimated) {
+            R.string.status_today_estimated
+        } else {
+            R.string.status_today_balance
+        }
+        return strings.getString(
+            format,
+            amount(snapshot.currencyCode, todayUsed),
+            amount(snapshot.currencyCode, balance)
+        )
+    }
+
+    fun amount(currencyCode: String, value: Double): String {
+        val symbol = when (currencyCode.uppercase(Locale.ROOT)) {
+            "CNY", "RMB" -> "¥"
+            "EUR" -> "€"
+            "GBP" -> "£"
+            else -> "$"
+        }
+        return symbol + String.format(Locale.US, "%.2f", value)
+    }
 }
 
 /** Contrast helpers shared by the settings preview and the real overlay. */
@@ -99,6 +137,13 @@ class OverlayDisplayPreferences(context: Context) {
 
     fun setVisualStyle(value: StatusBarVisualStyle) = putString(KEY_VISUAL_STYLE, value.name)
 
+    fun contentMode(): BalanceContentMode = enumPreference(
+        KEY_CONTENT_MODE,
+        BalanceContentMode.BALANCE_ONLY
+    )
+
+    fun setContentMode(value: BalanceContentMode) = putString(KEY_CONTENT_MODE, value.name)
+
     fun textColor(): StatusBarTextColor = enumPreference(
         KEY_TEXT_COLOR,
         StatusBarTextColor.WHITE
@@ -162,6 +207,7 @@ class OverlayDisplayPreferences(context: Context) {
         private const val KEY_PROVIDER_DISPLAY_MODE = "provider_display_mode"
         private const val KEY_POSITION_PRESET = "status_bar_position_preset"
         private const val KEY_VISUAL_STYLE = "status_bar_visual_style"
+        private const val KEY_CONTENT_MODE = "balance_content_mode"
         private const val KEY_TEXT_COLOR = "status_bar_text_color"
         private const val KEY_HORIZONTAL_OFFSET_DP = "status_bar_horizontal_offset_dp"
         private const val KEY_VERTICAL_OFFSET_DP = "status_bar_vertical_adjustment_dp"

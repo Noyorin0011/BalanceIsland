@@ -15,6 +15,7 @@
     <string name="section_alerts">额度警告与手动余额</string>
     <string name="section_refresh">刷新频率与通知</string>
     <string name="section_display_accounts">显示账户</string>
+    <string name="section_display_content">显示内容</string>
     <string name="section_position">位置预设</string>
     <string name="section_style">文字样式</string>
     <string name="section_background">后台运行与控制中心</string>
@@ -41,6 +42,12 @@
     <string name="save_refresh_interval">保存刷新间隔</string>
     <string name="background_refresh_help">不同厂商的省电策略可能限制后台定时；请允许后台活动并关闭本应用的电池优化。</string>
     <string name="display_rotation_help">自动模式每 5 秒轮播；点按文字条立即切换账户。</string>
+    <string name="content_balance_only">仅显示余额</string>
+    <string name="content_today_balance">今日已用 / 余额</string>
+    <string name="content_auto_rotate">余额与今日用量轮播</string>
+    <string name="content_mode_help">优先使用官方今日用量；DeepSeek、Moonshot、SiliconFlow 使用持久化余额差估算，进程恢复后会补算离线期间的余额下降。</string>
+    <string name="status_today_balance">今%1$s/余%2$s</string>
+    <string name="status_today_estimated">今约%1$s/余%2$s</string>
     <string name="horizontal_offset">额外左右偏移：%1$d dp</string>
     <string name="vertical_offset">距屏幕顶部：%1$d dp</string>
     <string name="safe_area_help">圆角安全预设会读取系统的显示缺口与圆角 Insets，并保留最小侧边空间。</string>
@@ -92,7 +99,7 @@
     <string name="openai_project_key_detected">已检测到 Project Key：应用将校验 Key，但不会自动查询余额。</string>
     <string name="provider_help_openrouter">余额接口需要 Management Key，普通推理 Key 可能返回 403。</string>
     <string name="provider_help_siliconflow">通过官方 /user/info 接口读取总余额。</string>
-    <string name="provider_help_moonshot">普通 Key 仅验证可用性；余额请在账户设置中手动填写。</string>
+    <string name="provider_help_moonshot">普通 Key 可直接读取余额；自动兼容国内站人民币和国际站美元。</string>
     <string name="provider_help_anthropic">普通 Key 不提供剩余余额；验证后可设置手动余额。</string>
     <string name="provider_help_gemini">Google AI Studio Key 不提供剩余余额；验证后可设置手动余额。</string>
     <string name="provider_help_xai">普通 Key 不提供剩余余额；验证后可设置手动余额。</string>
@@ -117,6 +124,9 @@
     <string name="snapshot_topup">充值 %1$s</string>
     <string name="snapshot_grant">赠送 %1$s</string>
     <string name="snapshot_official_total">官方账户总余额</string>
+    <string name="snapshot_cash_voucher">现金 %1$s · 代金券 %2$s</string>
+    <string name="snapshot_today_used">今日已用 %1$s</string>
+    <string name="snapshot_today_estimated">今日约用 %1$s（本机余额差）</string>
     <string name="snapshot_key_valid">Key 可用</string>
     <string name="snapshot_manual_required">官方未向普通 API Key 提供剩余余额，请设置手动余额</string>
     <string name="snapshot_manual_status">手动余额 · 接口状态：%1$s</string>

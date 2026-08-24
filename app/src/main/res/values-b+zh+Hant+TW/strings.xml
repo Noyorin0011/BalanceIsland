@@ -15,6 +15,7 @@
     <string name="section_alerts">額度提醒與手動餘額</string>
     <string name="section_refresh">更新頻率與通知</string>
     <string name="section_display_accounts">顯示帳戶</string>
+    <string name="section_display_content">顯示內容</string>
     <string name="section_position">位置預設</string>
     <string name="section_style">文字樣式</string>
     <string name="section_background">背景執行與快速設定</string>
@@ -41,6 +42,12 @@
     <string name="save_refresh_interval">儲存更新間隔</string>
     <string name="background_refresh_help">各家廠商的省電政策可能延遲背景工作。請允許此應用程式在背景執行，並關閉電池最佳化。</string>
     <string name="display_rotation_help">自動模式每 5 秒輪播；點按文字條可立即切換。</string>
+    <string name="content_balance_only">僅顯示餘額</string>
+    <string name="content_today_balance">今日已用 / 餘額</string>
+    <string name="content_auto_rotate">餘額與今日用量輪播</string>
+    <string name="content_mode_help">優先使用官方今日用量；DeepSeek、Moonshot、SiliconFlow 使用持久化餘額差估算，程序恢復後會補算離線期間的餘額下降。</string>
+    <string name="status_today_balance">今%1$s/餘%2$s</string>
+    <string name="status_today_estimated">今約%1$s/餘%2$s</string>
     <string name="horizontal_offset">額外水平偏移：%1$d dp</string>
     <string name="vertical_offset">距離螢幕頂端：%1$d dp</string>
     <string name="safe_area_help">安全預設會讀取系統的顯示缺口與圓角 Insets，並保留最小側邊留白。</string>
@@ -92,7 +99,7 @@
     <string name="openai_project_key_detected">已偵測到 Project Key：應用程式將驗證 Key，但不會自動查詢餘額。</string>
     <string name="provider_help_openrouter">餘額端點需要 Management Key；推論用 Key 可能回傳 403。</string>
     <string name="provider_help_siliconflow">透過官方 /user/info 端點讀取總餘額。</string>
-    <string name="provider_help_moonshot">一般 Key 僅驗證。請在帳戶設定中輸入手動餘額。</string>
+    <string name="provider_help_moonshot">一般 Key 可直接讀取餘額；自動相容中國站人民幣與國際站美元。</string>
     <string name="provider_help_anthropic">一般 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
     <string name="provider_help_gemini">Google AI Studio 的 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
     <string name="provider_help_xai">一般 Key 不會提供剩餘餘額。驗證後可設定手動餘額。</string>
@@ -117,6 +124,9 @@
     <string name="snapshot_topup">儲值 %1$s</string>
     <string name="snapshot_grant">贈送 %1$s</string>
     <string name="snapshot_official_total">官方帳戶總餘額</string>
+    <string name="snapshot_cash_voucher">現金 %1$s · 代金券 %2$s</string>
+    <string name="snapshot_today_used">今日已用 %1$s</string>
+    <string name="snapshot_today_estimated">今日約用 %1$s（本機餘額差）</string>
     <string name="snapshot_key_valid">Key 有效</string>
     <string name="snapshot_manual_required">此服務商不會向一般 API Key 提供剩餘餘額。請設定手動餘額。</string>
     <string name="snapshot_manual_status">手動餘額・API 狀態：%1$s</string>

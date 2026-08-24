@@ -36,6 +36,8 @@ import com.noyorin.balanceisland.data.BalanceRepository
 import com.noyorin.balanceisland.data.BalanceSnapshot
 import com.noyorin.balanceisland.data.Provider
 import com.noyorin.balanceisland.data.SnapshotStatus
+import com.noyorin.balanceisland.display.BalanceContentMode
+import com.noyorin.balanceisland.display.BalanceTextFormatter
 import com.noyorin.balanceisland.display.OverlayDisplayPreferences
 import com.noyorin.balanceisland.display.StatusBarContrast
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
@@ -62,6 +64,7 @@ class IslandOverlayService : Service() {
     private lateinit var displayPreferences: OverlayDisplayPreferences
     private lateinit var runtimePreferences: ServiceRuntimePreferences
     private var visibleAccountIndex = 0
+    private var showDailyDetail = false
     private var refreshInProgress = false
     private var explicitStop = false
 
@@ -83,7 +86,15 @@ class IslandOverlayService : Service() {
     private val rotateRunnable = object : Runnable {
         override fun run() {
             val count = visibleSnapshots().size
-            visibleAccountIndex = if (count > 1) (visibleAccountIndex + 1) % count else 0
+            if (displayPreferences.contentMode() == BalanceContentMode.AUTO_ROTATE && count > 0) {
+                showDailyDetail = !showDailyDetail
+                if (!showDailyDetail && count > 1) {
+                    visibleAccountIndex = (visibleAccountIndex + 1) % count
+                }
+            } else {
+                showDailyDetail = false
+                visibleAccountIndex = if (count > 1) (visibleAccountIndex + 1) % count else 0
+            }
             render()
             handler.postDelayed(this, ROTATE_INTERVAL_MS)
         }
@@ -260,7 +271,10 @@ class IslandOverlayService : Service() {
                     )
                 )
             }
-            row.addView(statusText(" ${snapshot.primaryText}", displayTextColor, 11.5f, outlined).apply {
+            val showToday = displayPreferences.contentMode() == BalanceContentMode.TODAY_AND_BALANCE ||
+                (displayPreferences.contentMode() == BalanceContentMode.AUTO_ROTATE && showDailyDetail)
+            val compactText = BalanceTextFormatter.compact(this, snapshot, showToday)
+            row.addView(statusText(" $compactText", displayTextColor, 11.5f, outlined).apply {
                 maxWidth = dp(STATUS_BAR_MAX_WIDTH_DP)
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
@@ -334,6 +348,7 @@ class IslandOverlayService : Service() {
     private fun showNextAccount() {
         val count = visibleSnapshots().size
         if (count > 1) visibleAccountIndex = (visibleAccountIndex + 1) % count
+        showDailyDetail = false
         render()
     }
 

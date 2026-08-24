@@ -15,6 +15,7 @@
     <string name="section_alerts">Alerts and manual balance</string>
     <string name="section_refresh">Refresh and notifications</string>
     <string name="section_display_accounts">Displayed accounts</string>
+    <string name="section_display_content">Displayed content</string>
     <string name="section_position">Position presets</string>
     <string name="section_style">Text style</string>
     <string name="section_background">Background and Quick Settings</string>
@@ -41,6 +42,12 @@
     <string name="save_refresh_interval">Save refresh interval</string>
     <string name="background_refresh_help">Vendor battery policies may delay background work. Allow background activity and disable battery optimization for this app.</string>
     <string name="display_rotation_help">Auto mode rotates every 5 seconds. Tap the overlay to switch immediately.</string>
+    <string name="content_balance_only">Balance only</string>
+    <string name="content_today_balance">Today used / balance</string>
+    <string name="content_auto_rotate">Rotate balance and daily use</string>
+    <string name="content_mode_help">Official daily usage is preferred. DeepSeek, Moonshot, and SiliconFlow use a persisted balance-difference estimate and catch up decreases after the process returns.</string>
+    <string name="status_today_balance">T%1$s/L%2$s</string>
+    <string name="status_today_estimated">T~%1$s/L%2$s</string>
     <string name="horizontal_offset">Extra horizontal offset: %1$d dp</string>
     <string name="vertical_offset">Distance from screen top: %1$d dp</string>
     <string name="safe_area_help">Safe presets read system cutout and rounded-corner insets and keep a minimum side margin.</string>
@@ -92,7 +99,7 @@
     <string name="openai_project_key_detected">Project key detected: the app will validate the key but will not query a balance automatically.</string>
     <string name="provider_help_openrouter">The balance endpoint requires a Management Key. Inference keys may return 403.</string>
     <string name="provider_help_siliconflow">Reads the total balance from the official /user/info endpoint.</string>
-    <string name="provider_help_moonshot">A regular key is validated only. Enter a manual balance in account settings.</string>
+    <string name="provider_help_moonshot">A standard key reads the balance directly; Chinese CNY and international USD endpoints are detected automatically.</string>
     <string name="provider_help_anthropic">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
     <string name="provider_help_gemini">Google AI Studio keys do not expose remaining balance. A manual balance can be set after validation.</string>
     <string name="provider_help_xai">Regular keys do not expose remaining balance. A manual balance can be set after validation.</string>
@@ -117,6 +124,9 @@
     <string name="snapshot_topup">Top-up %1$s</string>
     <string name="snapshot_grant">Grant %1$s</string>
     <string name="snapshot_official_total">Official account total balance</string>
+    <string name="snapshot_cash_voucher">Cash %1$s · voucher %2$s</string>
+    <string name="snapshot_today_used">Used today %1$s</string>
+    <string name="snapshot_today_estimated">About %1$s used today (local balance difference)</string>
     <string name="snapshot_key_valid">Key valid</string>
     <string name="snapshot_manual_required">The provider does not expose remaining balance to regular API keys. Set a manual balance.</string>
     <string name="snapshot_manual_status">Manual balance · API status: %1$s</string>

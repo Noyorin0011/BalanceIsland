@@ -21,6 +21,7 @@ class BalanceRepository(private val context: Context) {
     private val keys = SecureKeyStore(context)
     private val snapshots = SnapshotStore(context)
     private val accountSettings = AccountSettingsStore(context)
+    private val dailyUsage = DailyUsageStore(context)
     private val alertNotifier = BalanceAlertNotifier(context)
     private val client = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
@@ -41,10 +42,13 @@ class BalanceRepository(private val context: Context) {
         .map(snapshots::get)
         .map(::applyUserSettings)
 
-    fun removeCached(credentialId: String) = snapshots.remove(credentialId)
+    fun removeCached(credentialId: String) {
+        snapshots.remove(credentialId)
+        dailyUsage.remove(credentialId)
+    }
 
     private fun refreshOne(credential: ApiCredential): BalanceSnapshot {
-        return runCatching {
+        val raw = runCatching {
             when (credential.provider) {
                 Provider.DEEPSEEK -> fetchDeepSeek(credential)
                 Provider.OPENAI -> if (credential.apiKey.startsWith(OPENAI_ADMIN_KEY_PREFIX)) {
@@ -54,10 +58,7 @@ class BalanceRepository(private val context: Context) {
                 }
                 Provider.OPENROUTER -> fetchOpenRouter(credential)
                 Provider.SILICONFLOW -> fetchSiliconFlow(credential)
-                Provider.MOONSHOT -> verifyBearerKey(
-                    credential,
-                    "https://api.moonshot.cn/v1/models"
-                )
+                Provider.MOONSHOT -> fetchMoonshot(credential)
                 Provider.ANTHROPIC -> verifyAnthropicKey(credential)
                 Provider.GEMINI -> verifyBearerKey(
                     credential,
@@ -80,6 +81,7 @@ class BalanceRepository(private val context: Context) {
                 updatedAtEpochMillis = System.currentTimeMillis()
             )
         }
+        return attachDailyUsage(raw)
     }
 
     private fun fetchDeepSeek(credential: ApiCredential): BalanceSnapshot {
@@ -124,6 +126,9 @@ class BalanceRepository(private val context: Context) {
 
     private fun fetchOpenAi(credential: ApiCredential): BalanceSnapshot {
         val now = System.currentTimeMillis() / 1000
+        val todayStart = LocalDate.now(ZoneOffset.UTC)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toEpochSecond()
         val monthStart = LocalDate.now(ZoneOffset.UTC)
             .withDayOfMonth(1)
             .atStartOfDay(ZoneOffset.UTC)
@@ -140,13 +145,18 @@ class BalanceRepository(private val context: Context) {
         var spent = 0.0
         val buckets = costsJson.optJSONArray("data")
             ?: throw ApiException(text(R.string.error_missing_usage))
+        var todaySpent = 0.0
         for (i in 0 until buckets.length()) {
-            val results = buckets.getJSONObject(i).optJSONArray("results") ?: continue
+            val bucket = buckets.getJSONObject(i)
+            val results = bucket.optJSONArray("results") ?: continue
+            var bucketSpent = 0.0
             for (j in 0 until results.length()) {
-                spent += results.getJSONObject(j)
+                bucketSpent += results.getJSONObject(j)
                     .optJSONObject("amount")
                     ?.optDouble("value", 0.0) ?: 0.0
             }
+            spent += bucketSpent
+            if (bucket.optLong("start_time", 0L) >= todayStart) todaySpent += bucketSpent
         }
 
         val spendLimit = runCatching {
@@ -173,7 +183,8 @@ class BalanceRepository(private val context: Context) {
                 currencyCode = "USD",
                 isManualBalance = false,
                 status = if (remaining <= limit * 0.1) SnapshotStatus.WARNING else SnapshotStatus.OK,
-                updatedAtEpochMillis = System.currentTimeMillis()
+                updatedAtEpochMillis = System.currentTimeMillis(),
+                todayUsedAmount = todaySpent
             )
         } else {
             BalanceSnapshot(
@@ -187,7 +198,8 @@ class BalanceRepository(private val context: Context) {
                 currencyCode = "USD",
                 isManualBalance = false,
                 status = SnapshotStatus.OK,
-                updatedAtEpochMillis = System.currentTimeMillis()
+                updatedAtEpochMillis = System.currentTimeMillis(),
+                todayUsedAmount = todaySpent
             )
         }
     }
@@ -200,6 +212,20 @@ class BalanceRepository(private val context: Context) {
         val purchased = data.number("total_credits")
         val used = data.number("total_usage")
         val remaining = (purchased - used).coerceAtLeast(0.0)
+        val keyRecords = runCatching {
+            getJson("https://openrouter.ai/api/v1/keys", credential.apiKey)
+                .optJSONArray("data")
+        }.getOrNull()
+        val dailyValues = buildList<Double> {
+            if (keyRecords != null) {
+                for (i in 0 until keyRecords.length()) {
+                    keyRecords.optJSONObject(i)
+                        ?.numberOrNull("usage_daily")
+                        ?.let(::add)
+                }
+            }
+        }
+        val todayUsed = dailyValues.takeIf { it.isNotEmpty() }?.sum()
         return BalanceSnapshot(
             provider = credential.provider,
             credentialId = credential.id,
@@ -215,6 +241,38 @@ class BalanceRepository(private val context: Context) {
             currencyCode = "USD",
             isManualBalance = false,
             status = SnapshotStatus.OK,
+            updatedAtEpochMillis = System.currentTimeMillis(),
+            todayUsedAmount = todayUsed
+        )
+    }
+
+    private fun fetchMoonshot(credential: ApiCredential): BalanceSnapshot {
+        val (json, currency) = runCatching {
+            getJson("https://api.moonshot.cn/v1/users/me/balance", credential.apiKey) to "CNY"
+        }.getOrElse {
+            getJson("https://api.moonshot.ai/v1/users/me/balance", credential.apiKey) to "USD"
+        }
+        val data = json.optJSONObject("data")
+            ?: throw ApiException(text(R.string.error_missing_balance))
+        val available = data.number("available_balance")
+        val cash = data.number("cash_balance")
+        val voucher = data.number("voucher_balance")
+        val sign = currencySymbol(currency)
+        return BalanceSnapshot(
+            provider = credential.provider,
+            credentialId = credential.id,
+            accountLabel = credential.label,
+            keySuffix = credential.keySuffix,
+            primaryText = "$sign${money(available)}",
+            secondaryText = text(
+                R.string.snapshot_cash_voucher,
+                "$sign${money(cash)}",
+                "$sign${money(voucher)}"
+            ),
+            balanceAmount = available,
+            currencyCode = currency,
+            isManualBalance = false,
+            status = if (available > 0.0) SnapshotStatus.OK else SnapshotStatus.WARNING,
             updatedAtEpochMillis = System.currentTimeMillis()
         )
     }
@@ -300,7 +358,18 @@ class BalanceRepository(private val context: Context) {
             secondaryText = text(R.string.snapshot_manual_status, raw.primaryText),
             balanceAmount = settings.manualBalance,
             isManualBalance = true,
+            todayUsedAmount = null,
+            todayUsageIsEstimated = false,
             status = status
+        )
+    }
+
+    private fun attachDailyUsage(snapshot: BalanceSnapshot): BalanceSnapshot {
+        if (snapshot.status == SnapshotStatus.ERROR || snapshot.balanceAmount == null) return snapshot
+        if (snapshot.provider !in LOCALLY_TRACKED_PROVIDERS) return snapshot
+        return snapshot.copy(
+            todayUsedAmount = dailyUsage.record(snapshot.credentialId, snapshot.balanceAmount),
+            todayUsageIsEstimated = true
         )
     }
 
@@ -364,6 +433,11 @@ class BalanceRepository(private val context: Context) {
     companion object {
         private const val NEAR_LINE_MULTIPLIER = 1.5
         private const val OPENAI_ADMIN_KEY_PREFIX = "sk-admin-"
+        private val LOCALLY_TRACKED_PROVIDERS = setOf(
+            Provider.DEEPSEEK,
+            Provider.MOONSHOT,
+            Provider.SILICONFLOW
+        )
         const val ACTION_BALANCE_UPDATED = "com.noyorin.balanceisland.BALANCE_UPDATED"
     }
 }
