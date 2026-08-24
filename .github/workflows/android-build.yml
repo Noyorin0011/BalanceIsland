@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  # The release publishing step must be able to create/update a GitHub Release
-  # and replace its APK asset. Pull requests never run that step.
+  # Tag builds create/update GitHub Releases. GitHub keeps this token read-only
+  # for pull requests opened from forks.
   contents: write
 
 concurrency:
@@ -63,8 +63,36 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Publish or replace debug APK
+        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && endsWith(github.ref_name, '-debug') }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' app/build.gradle.kts | head -n 1)"
+          test -n "$version_name"
+
+          expected_tag="v${version_name}-debug"
+          if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match app version; expected $expected_tag." >&2
+            exit 1
+          fi
+
+          release_asset="$RUNNER_TEMP/BalanceIsland-${GITHUB_REF_NAME}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$release_asset"
+
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" \
+              --verify-tag \
+              --title "Balance Island ${GITHUB_REF_NAME}" \
+              --prerelease \
+              --notes "Debug-signed testing build. It may not install over a build signed by another key."
+          fi
+
+          gh release upload "$GITHUB_REF_NAME" "$release_asset" --clobber
+
       - name: Prepare release keystore
-        if: github.event_name != 'pull_request'
+        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !endsWith(github.ref_name, '-debug') }}
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -79,7 +107,7 @@ jobs:
           keytool -list -keystore "$RUNNER_TEMP/balance-island-release.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null
 
       - name: Build signed release APK
-        if: github.event_name != 'pull_request'
+        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !endsWith(github.ref_name, '-debug') }}
         env:
           BALANCE_ISLAND_STORE_FILE: ${{ runner.temp }}/balance-island-release.jks
           BALANCE_ISLAND_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -88,7 +116,7 @@ jobs:
         run: gradle :app:assembleRelease --no-daemon --stacktrace
 
       - name: Verify release signature
-        if: github.event_name != 'pull_request'
+        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !endsWith(github.ref_name, '-debug') }}
         shell: bash
         run: |
           apk="app/build/outputs/apk/release/app-release.apk"
@@ -103,7 +131,7 @@ jobs:
           fi
 
       - name: Upload signed release APK
-        if: github.event_name != 'pull_request'
+        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !endsWith(github.ref_name, '-debug') }}
         uses: actions/upload-artifact@v7
         with:
           name: BalanceIsland-release-${{ github.run_number }}
@@ -112,7 +140,7 @@ jobs:
           retention-days: 30
 
       - name: Publish or replace Release APK
-        if: github.event_name != 'pull_request'
+        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !endsWith(github.ref_name, '-debug') }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -120,7 +148,13 @@ jobs:
           version_name="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' app/build.gradle.kts | head -n 1)"
           test -n "$version_name"
 
-          release_tag="v${version_name}"
+          expected_tag="v${version_name}"
+          if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match app version; expected $expected_tag." >&2
+            exit 1
+          fi
+
+          release_tag="$GITHUB_REF_NAME"
           release_asset="$RUNNER_TEMP/BalanceIsland-v${version_name}.apk"
           release_notes="$RUNNER_TEMP/BalanceIsland-v${version_name}-notes.md"
           cp app/build/outputs/apk/release/app-release.apk "$release_asset"
@@ -140,13 +174,13 @@ jobs:
           if ! gh release view "$release_tag" >/dev/null 2>&1; then
             if [[ -f "$release_notes" ]]; then
               gh release create "$release_tag" \
-                --target "$GITHUB_SHA" \
+                --verify-tag \
                 --title "Balance Island v$version_name" \
                 --latest \
                 --notes-file "$release_notes"
             else
               gh release create "$release_tag" \
-                --target "$GITHUB_SHA" \
+                --verify-tag \
                 --title "Balance Island v$version_name" \
                 --latest \
                 --notes "Automated signed Android release build."
@@ -166,5 +200,5 @@ jobs:
           gh release upload "$release_tag" "$release_asset" --clobber
 
       - name: Remove release keystore
-        if: always() && github.event_name != 'pull_request'
+        if: ${{ always() && github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !endsWith(github.ref_name, '-debug') }}
         run: rm -f "$RUNNER_TEMP/balance-island-release.jks"
