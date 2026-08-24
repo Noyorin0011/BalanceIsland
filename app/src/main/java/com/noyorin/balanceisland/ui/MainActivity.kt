@@ -677,9 +677,12 @@ private fun BalanceIslandScreen(
                 Text(stringResource(R.string.overlay_content_width, contentWidth.toInt()))
                 Slider(
                     value = contentWidth,
-                    onValueChange = { contentWidth = it },
-                    onValueChangeFinished = {
-                        preferences.setContentWidthDp(contentWidth.toInt())
+                    onValueChange = {
+                        val widthDp = it.toInt()
+                        if (widthDp != contentWidth.toInt()) {
+                            contentWidth = widthDp.toFloat()
+                            preferences.setContentWidthDp(widthDp)
+                        }
                     },
                     valueRange = 72f..320f
                 )
