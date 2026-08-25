@@ -113,7 +113,12 @@ import com.noyorin.balanceisland.display.StatusBarContrast
 import com.noyorin.balanceisland.display.StatusBarTextColor
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
 import com.noyorin.balanceisland.experimental.ExperimentalPlanActivity
+import com.noyorin.balanceisland.experimental.ExperimentalPlanOverlayFormatter
 import com.noyorin.balanceisland.experimental.ExperimentalPlanPreferences
+import com.noyorin.balanceisland.experimental.ExperimentalPlanReadError
+import com.noyorin.balanceisland.experimental.ExperimentalPlanUsage
+import com.noyorin.balanceisland.experimental.ExperimentalPlanWindowClassifier
+import com.noyorin.balanceisland.experimental.ExperimentalPlanWindowKind
 import com.noyorin.balanceisland.quicksettings.BalanceQuickSettingsTileService
 import com.noyorin.balanceisland.localization.AppLanguage
 import com.noyorin.balanceisland.localization.AppLanguagePreferences
@@ -260,6 +265,16 @@ private fun BalanceIslandScreen(
     var riskAccepted by rememberSaveable { mutableStateOf(false) }
     var experimentalRefreshKey by remember { mutableStateOf(0) }
     val experimentalUsage = remember(experimentalRefreshKey) { experimentalPreferences.usage() }
+    val experimentalReadState = remember(experimentalRefreshKey) { experimentalPreferences.readState() }
+    val experimentalAutoRefresh = remember(experimentalRefreshKey) {
+        experimentalPreferences.autoRefreshWhileOpenEnabled()
+    }
+    var planInCustomGroup by remember {
+        mutableStateOf(preferences.includePlanInCustomGroup())
+    }
+    val experimentalPlanAvailable = experimentalUsage?.let {
+        ExperimentalPlanOverlayFormatter.items(it).isNotEmpty()
+    } == true
     val experimentalLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
@@ -369,18 +384,27 @@ private fun BalanceIslandScreen(
         )
     }
 
-    LaunchedEffect(state.credentials) {
+    LaunchedEffect(state.credentials, experimentalPlanAvailable) {
         val providers = state.credentials.map { it.provider }.toSet()
-        val invalidPin = displayMode.provider?.let { it !in providers } ?: false
+        val invalidPin = when (displayMode) {
+            ProviderDisplayMode.PIN_EXPERIMENTAL_PLAN -> !experimentalPlanAvailable
+            else -> displayMode.provider?.let { it !in providers } ?: false
+        }
         if (invalidPin) {
             displayMode = ProviderDisplayMode.AUTO_CONFIGURED
             preferences.setMode(displayMode)
         }
         if (displayMode == ProviderDisplayMode.CUSTOM_GROUP &&
-            providerGroup.intersect(providers).isEmpty() && providers.isNotEmpty()
+            providerGroup.intersect(providers).isEmpty() &&
+            !(experimentalPlanAvailable && planInCustomGroup)
         ) {
-            providerGroup = providers
-            preferences.setProviderGroup(providerGroup)
+            if (providers.isNotEmpty()) {
+                providerGroup = providers
+                preferences.setProviderGroup(providerGroup)
+            } else {
+                displayMode = ProviderDisplayMode.AUTO_CONFIGURED
+                preferences.setMode(displayMode)
+            }
         }
     }
 
@@ -478,7 +502,8 @@ private fun BalanceIslandScreen(
                 visualStyle,
                 textColor,
                 contentMode,
-                contentWidth.toInt()
+                contentWidth.toInt(),
+                experimentalUsage.takeIf { preferences.shouldIncludePlan() }
             )
 
             if (selectedPage == SettingsPage.OVERVIEW) {
@@ -730,17 +755,22 @@ private fun BalanceIslandScreen(
                 ProviderDisplayMode.entries.forEach { mode ->
                     val enabled = when (mode) {
                         ProviderDisplayMode.AUTO_CONFIGURED -> true
-                        ProviderDisplayMode.CUSTOM_GROUP -> configuredProviders.isNotEmpty()
+                        ProviderDisplayMode.CUSTOM_GROUP ->
+                            configuredProviders.isNotEmpty() || experimentalPlanAvailable
+                        ProviderDisplayMode.PIN_EXPERIMENTAL_PLAN -> experimentalPlanAvailable
                         else -> mode.provider?.let { it in configuredProviderSet } == true
                     }
                     FilterChip(
                         selected = displayMode == mode,
                         onClick = {
                             if (mode == ProviderDisplayMode.CUSTOM_GROUP &&
-                                providerGroup.intersect(configuredProviderSet).isEmpty()
+                                providerGroup.intersect(configuredProviderSet).isEmpty() &&
+                                !(experimentalPlanAvailable && planInCustomGroup)
                             ) {
                                 providerGroup = configuredProviderSet
                                 preferences.setProviderGroup(providerGroup)
+                                planInCustomGroup = experimentalPlanAvailable
+                                preferences.setIncludePlanInCustomGroup(planInCustomGroup)
                             }
                             displayMode = mode
                             preferences.setMode(mode)
@@ -762,7 +792,9 @@ private fun BalanceIslandScreen(
                         FilterChip(
                             selected = selected,
                             onClick = {
-                                if (!selected || activeSelection.size > 1) {
+                                val activeCount = activeSelection.size +
+                                    if (experimentalPlanAvailable && planInCustomGroup) 1 else 0
+                                if (!selected || activeCount > 1) {
                                     providerGroup = if (selected) {
                                         providerGroup - provider
                                     } else {
@@ -775,9 +807,28 @@ private fun BalanceIslandScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                    FilterChip(
+                        selected = experimentalPlanAvailable && planInCustomGroup,
+                        onClick = {
+                            val selected = experimentalPlanAvailable && planInCustomGroup
+                            val hasSelectedApi = providerGroup.intersect(configuredProviderSet).isNotEmpty()
+                            if (!selected || hasSelectedApi) {
+                                planInCustomGroup = !selected
+                                preferences.setIncludePlanInCustomGroup(planInCustomGroup)
+                            }
+                        },
+                        enabled = experimentalPlanAvailable,
+                        label = { Text(stringResource(R.string.provider_group_plan_usage)) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
                 Text(
                     stringResource(R.string.display_rotation_help),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    stringResource(R.string.plan_display_help),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -997,7 +1048,10 @@ private fun BalanceIslandScreen(
                         }
                         experimentalUsage.primaryRemaining?.let {
                             Text(
-                                stringResource(R.string.experimental_primary_usage, it),
+                                stringResource(
+                                    experimentalUsageStringResource(experimentalUsage.primaryWindowSeconds),
+                                    it
+                                ),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -1013,7 +1067,10 @@ private fun BalanceIslandScreen(
                         }
                         experimentalUsage.secondaryRemaining?.let {
                             Text(
-                                stringResource(R.string.experimental_secondary_usage, it),
+                                stringResource(
+                                    experimentalUsageStringResource(experimentalUsage.secondaryWindowSeconds),
+                                    it
+                                ),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -1034,6 +1091,25 @@ private fun BalanceIslandScreen(
                                     .format(Date(experimentalUsage.updatedAtMillis))
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (experimentalAutoRefresh) {
+                        Text(
+                            stringResource(R.string.experimental_auto_refresh_active_summary),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    experimentalReadState?.lastError?.let { error ->
+                        Text(
+                            stringResource(
+                                R.string.experimental_last_attempt_failed,
+                                SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+                                    .format(Date(experimentalReadState.lastAttemptAtMillis)),
+                                stringResource(experimentalReadErrorStringResource(error))
+                            ),
+                            color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -1060,6 +1136,21 @@ private fun BalanceIslandScreen(
         }
     }
     }
+}
+
+private fun experimentalUsageStringResource(windowSeconds: Long?): Int =
+    when (ExperimentalPlanWindowClassifier.classify(windowSeconds)) {
+        ExperimentalPlanWindowKind.FIVE_HOUR -> R.string.experimental_primary_usage
+        ExperimentalPlanWindowKind.WEEKLY -> R.string.experimental_secondary_usage
+        ExperimentalPlanWindowKind.UNKNOWN -> R.string.experimental_generic_usage
+    }
+
+private fun experimentalReadErrorStringResource(error: ExperimentalPlanReadError): Int = when (error) {
+    ExperimentalPlanReadError.AUTH -> R.string.experimental_error_auth
+    ExperimentalPlanReadError.RATE_LIMIT -> R.string.experimental_error_rate_limit
+    ExperimentalPlanReadError.NETWORK -> R.string.experimental_error_network
+    ExperimentalPlanReadError.HTTP -> R.string.experimental_error_http
+    ExperimentalPlanReadError.PARSE -> R.string.experimental_error_parse
 }
 
 @Composable
@@ -1273,10 +1364,15 @@ private fun StatusBarPreview(
     visualStyle: StatusBarVisualStyle,
     configuredColor: StatusBarTextColor,
     contentMode: BalanceContentMode,
-    contentWidthDp: Int
+    contentWidthDp: Int,
+    experimentalUsage: ExperimentalPlanUsage?
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val snapshot = snapshots.firstOrNull()
+    val experimentalText = experimentalUsage?.let {
+        ExperimentalPlanOverlayFormatter.compact(context, it)
+    }
+    val showingExperimental = snapshot == null && experimentalText != null
     val sameProviderCount = snapshot?.let { selected ->
         snapshots.count { it.provider == selected.provider }
     } ?: 0
@@ -1338,14 +1434,19 @@ private fun StatusBarPreview(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (snapshot != null) ProviderLogo(snapshot.provider, if (hasBackground) 15 else 18)
-            else Box(
+            if (snapshot != null) {
+                ProviderLogo(snapshot.provider, if (hasBackground) 15 else 18)
+            } else if (showingExperimental) {
+                ProviderLogo(Provider.OPENAI, if (hasBackground) 15 else 18)
+            } else Box(
                 Modifier
                     .size(if (hasBackground) 15.dp else 18.dp)
                     .background(Color(0xFFFFBE46), CircleShape)
             )
             Text(
-                if (snapshot == null) {
+                if (showingExperimental) {
+                    experimentalText.orEmpty()
+                } else if (snapshot == null) {
                     stringResource(R.string.configure_api)
                 } else {
                     val showToday = contentMode != BalanceContentMode.BALANCE_ONLY
@@ -1497,6 +1598,7 @@ private fun statusColor(status: SnapshotStatus) = when (status) {
 private fun ProviderDisplayMode.localizedLabel(): String = when (this) {
     ProviderDisplayMode.AUTO_CONFIGURED -> stringResource(R.string.mode_auto)
     ProviderDisplayMode.CUSTOM_GROUP -> stringResource(R.string.mode_custom_group)
+    ProviderDisplayMode.PIN_EXPERIMENTAL_PLAN -> stringResource(R.string.mode_pin_plan_usage)
     else -> stringResource(R.string.mode_pin_provider, checkNotNull(provider).displayName)
 }
 

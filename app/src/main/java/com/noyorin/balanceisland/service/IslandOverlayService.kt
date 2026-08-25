@@ -46,6 +46,9 @@ import com.noyorin.balanceisland.display.BalanceTextFormatter
 import com.noyorin.balanceisland.display.OverlayDisplayPreferences
 import com.noyorin.balanceisland.display.StatusBarContrast
 import com.noyorin.balanceisland.display.StatusBarVisualStyle
+import com.noyorin.balanceisland.experimental.ExperimentalPlanOverlayFormatter
+import com.noyorin.balanceisland.experimental.ExperimentalPlanPreferences
+import com.noyorin.balanceisland.experimental.ExperimentalPlanUsage
 import com.noyorin.balanceisland.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +70,7 @@ class IslandOverlayService : Service() {
     private lateinit var params: WindowManager.LayoutParams
     private lateinit var repository: BalanceRepository
     private lateinit var displayPreferences: OverlayDisplayPreferences
+    private lateinit var planPreferences: ExperimentalPlanPreferences
     private lateinit var runtimePreferences: ServiceRuntimePreferences
     private var visibleAccountIndex = 0
     private var showDailyDetail = false
@@ -81,6 +85,10 @@ class IslandOverlayService : Service() {
             if (intent?.action == BalanceRepository.ACTION_BALANCE_UPDATED) {
                 observeVisibleBalances()
                 scheduleNextRefresh()
+            }
+            if (intent?.action == ExperimentalPlanPreferences.ACTION_PLAN_USAGE_CHANGED) {
+                lastChangeAt = SystemClock.elapsedRealtime()
+                if (overlayHidden) showOverlay()
             }
             applyPosition()
             render()
@@ -115,7 +123,7 @@ class IslandOverlayService : Service() {
 
     private val rotateRunnable = object : Runnable {
         override fun run() {
-            val count = visibleSnapshots().size
+            val count = visibleEntryCount()
             if (displayPreferences.contentMode() == BalanceContentMode.AUTO_ROTATE && count > 0) {
                 showDailyDetail = !showDailyDetail
                 if (!showDailyDetail && count > 1) {
@@ -134,6 +142,7 @@ class IslandOverlayService : Service() {
         super.onCreate()
         repository = BalanceRepository(this)
         displayPreferences = OverlayDisplayPreferences(this)
+        planPreferences = ExperimentalPlanPreferences(this)
         runtimePreferences = ServiceRuntimePreferences(this)
         runtimePreferences.setServiceRunning(true)
         createNotificationChannel()
@@ -176,6 +185,7 @@ class IslandOverlayService : Service() {
             addAction(BalanceRepository.ACTION_BALANCE_UPDATED)
             addAction(OverlayDisplayPreferences.ACTION_DISPLAY_SETTINGS_CHANGED)
             addAction(AppLanguagePreferences.ACTION_LANGUAGE_CHANGED)
+            addAction(ExperimentalPlanPreferences.ACTION_PLAN_USAGE_CHANGED)
         }
         ContextCompat.registerReceiver(
             this,
@@ -260,10 +270,14 @@ class IslandOverlayService : Service() {
     private fun render() {
         if (!::root.isInitialized) return
         val snapshots = visibleSnapshots()
-        if (snapshots.isNotEmpty()) visibleAccountIndex %= snapshots.size else visibleAccountIndex = 0
+        val planUsage = visiblePlanUsage()
+        val planText = planUsage?.let { ExperimentalPlanOverlayFormatter.compact(this, it) }
+        val entryCount = snapshots.size + if (planText == null) 0 else 1
+        if (entryCount > 0) visibleAccountIndex %= entryCount else visibleAccountIndex = 0
         val configuredTextColor = displayPreferences.textColor().argb
         val visualStyle = displayPreferences.visualStyle()
-        val snapshot = snapshots.getOrNull(visibleAccountIndex)
+        val showingPlan = planText != null && visibleAccountIndex == snapshots.size
+        val snapshot = if (showingPlan) null else snapshots.getOrNull(visibleAccountIndex)
         val normalTextColor = if (visualStyle == StatusBarVisualStyle.ADAPTIVE_TEXT) {
             StatusBarContrast.textColorForNightMode(
                 (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
@@ -304,7 +318,7 @@ class IslandOverlayService : Service() {
         }
         val iconSize = dp(if (hasBackground) BACKGROUND_ICON_SIZE_DP else DEFAULT_ICON_SIZE_DP)
         val adaptiveContrast = visualStyle == StatusBarVisualStyle.ADAPTIVE_TEXT
-        if (snapshots.isEmpty()) {
+        if (entryCount == 0) {
             row.addView(providerIcon(null), linearParams(iconSize, iconSize))
             row.addView(
                 statusText(
@@ -312,6 +326,17 @@ class IslandOverlayService : Service() {
                     normalTextColor,
                     outlined = visualStyle == StatusBarVisualStyle.OUTLINED_TEXT,
                     adaptiveContrast = adaptiveContrast
+                )
+            )
+        } else if (showingPlan) {
+            val outlined = visualStyle == StatusBarVisualStyle.OUTLINED_TEXT
+            row.addView(providerIcon(Provider.OPENAI), linearParams(iconSize, iconSize))
+            row.addView(
+                scrollingStatusText(
+                    " $planText",
+                    displayTextColor,
+                    outlined,
+                    adaptiveContrast
                 )
             )
         } else {
@@ -327,24 +352,14 @@ class IslandOverlayService : Service() {
             } else {
                 ""
             }
-            row.addView(statusText(
-                " $qualifier$compactText",
-                displayTextColor,
-                11.5f,
-                outlined,
-                adaptiveContrast
-            ).apply {
-                val contentWidthPx = dp(displayPreferences.contentWidthDp())
-                minWidth = contentWidthPx
-                maxWidth = contentWidthPx
-                setSingleLine(true)
-                ellipsize = TextUtils.TruncateAt.MARQUEE
-                marqueeRepeatLimit = -1
-                isSelected = true
-                setHorizontallyScrolling(true)
-                isHorizontalFadingEdgeEnabled = true
-                setFadingEdgeLength(dp(10))
-            })
+            row.addView(
+                scrollingStatusText(
+                    " $qualifier$compactText",
+                    displayTextColor,
+                    outlined,
+                    adaptiveContrast
+                )
+            )
         }
         root.addView(
             row,
@@ -416,8 +431,26 @@ class IslandOverlayService : Service() {
         }
     }
 
+    private fun scrollingStatusText(
+        value: String,
+        color: Int,
+        outlined: Boolean,
+        adaptiveContrast: Boolean
+    ) = statusText(value, color, 11.5f, outlined, adaptiveContrast).apply {
+        val contentWidthPx = dp(displayPreferences.contentWidthDp())
+        minWidth = contentWidthPx
+        maxWidth = contentWidthPx
+        setSingleLine(true)
+        ellipsize = TextUtils.TruncateAt.MARQUEE
+        marqueeRepeatLimit = -1
+        isSelected = true
+        setHorizontallyScrolling(true)
+        isHorizontalFadingEdgeEnabled = true
+        setFadingEdgeLength(dp(10))
+    }
+
     private fun showNextAccount() {
-        val count = visibleSnapshots().size
+        val count = visibleEntryCount()
         if (count > 1) visibleAccountIndex = (visibleAccountIndex + 1) % count
         showDailyDetail = false
         render()
@@ -425,6 +458,16 @@ class IslandOverlayService : Service() {
 
     private fun visibleSnapshots(): List<BalanceSnapshot> =
         displayPreferences.select(repository.cached())
+
+    private fun visiblePlanUsage(): ExperimentalPlanUsage? {
+        if (!displayPreferences.shouldIncludePlan()) return null
+        return planPreferences.usage()?.takeIf {
+            it.primaryRemaining != null || it.secondaryRemaining != null
+        }
+    }
+
+    private fun visibleEntryCount(): Int =
+        visibleSnapshots().size + if (visiblePlanUsage() == null) 0 else 1
 
     private fun observeVisibleBalances(snapshots: List<BalanceSnapshot> = visibleSnapshots()) {
         val current = snapshots.associate { snapshot ->

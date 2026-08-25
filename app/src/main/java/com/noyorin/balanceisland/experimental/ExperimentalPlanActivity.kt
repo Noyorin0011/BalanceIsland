@@ -1,10 +1,13 @@
 package com.noyorin.balanceisland.experimental
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.http.SslError
 import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
@@ -29,6 +32,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.webkit.ProxyConfig
@@ -48,6 +52,8 @@ class ExperimentalPlanActivity : ComponentActivity() {
     private lateinit var proxyEnabled: CheckBox
     private lateinit var proxyHost: EditText
     private lateinit var proxyPort: EditText
+    private lateinit var autoRefreshEnabled: CheckBox
+    private lateinit var resetNotificationsEnabled: CheckBox
     private lateinit var preferences: ExperimentalPlanPreferences
     private lateinit var proxyPreferences: ExperimentalProxyPreferences
 
@@ -55,6 +61,20 @@ class ExperimentalPlanActivity : ComponentActivity() {
     private var mainFrameLoading = false
     private var mainFrameFailed = false
     private var webViewAvailable = true
+    private var activityVisible = false
+    private var pageReady = false
+    private var usageReadInFlight = false
+    private var usageReadGeneration = 0
+    private var autoRefreshPaused = false
+    private var suppressAutoRefreshListener = false
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted && ::resetNotificationsEnabled.isInitialized) {
+            preferences.setResetNotificationsEnabled(false)
+            resetNotificationsEnabled.isChecked = false
+        }
+    }
     private val loadTimeout = Runnable {
         if (mainFrameLoading && webViewAvailable) {
             mainFrameLoading = false
@@ -63,6 +83,9 @@ class ExperimentalPlanActivity : ComponentActivity() {
             status.text = getString(R.string.experimental_web_timeout)
             progress.visibility = View.GONE
         }
+    }
+    private val autoRefresh = Runnable {
+        if (canAutoRefresh()) readUsage(manual = false)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -103,6 +126,59 @@ class ExperimentalPlanActivity : ComponentActivity() {
         }
         actions.addView(readButton, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         actions.addView(clearButton, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+        autoRefreshEnabled = CheckBox(this).apply {
+            text = getString(R.string.experimental_auto_refresh_enable)
+            isChecked = preferences.autoRefreshWhileOpenEnabled()
+        }
+        val autoRefreshHelp = TextView(this).apply {
+            text = getString(R.string.experimental_auto_refresh_help)
+            textSize = 12f
+            setTextColor(0xffb3261e.toInt())
+            setPadding(0, 0, 0, dp(4))
+        }
+        autoRefreshEnabled.setOnCheckedChangeListener { _, checked ->
+            if (suppressAutoRefreshListener) return@setOnCheckedChangeListener
+            if (checked) {
+                setAutoRefreshChecked(false)
+                android.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.experimental_auto_refresh_confirm_title)
+                    .setMessage(R.string.experimental_auto_refresh_confirm_message)
+                    .setPositiveButton(R.string.experimental_auto_refresh_confirm_enable) { _, _ ->
+                        preferences.setAutoRefreshWhileOpenEnabled(true)
+                        autoRefreshPaused = false
+                        setAutoRefreshChecked(true)
+                        scheduleImmediateAutoRefresh()
+                    }
+                    .setNegativeButton(R.string.dialog_cancel, null)
+                    .show()
+            } else {
+                preferences.setAutoRefreshWhileOpenEnabled(false)
+                cancelAutoRefresh()
+            }
+        }
+
+        resetNotificationsEnabled = CheckBox(this).apply {
+            text = getString(R.string.experimental_reset_notifications_enable)
+            isChecked = preferences.resetNotificationsEnabled()
+            setOnCheckedChangeListener { _, checked ->
+                preferences.setResetNotificationsEnabled(checked)
+                if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(
+                        this@ExperimentalPlanActivity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        }
+        val resetNotificationsHelp = TextView(this).apply {
+            text = getString(R.string.experimental_reset_notifications_help)
+            textSize = 12f
+            setTextColor(0xffb3261e.toInt())
+            setPadding(0, 0, 0, dp(4))
+        }
 
         proxyEnabled = CheckBox(this).apply {
             text = getString(R.string.experimental_proxy_enable)
@@ -174,6 +250,10 @@ class ExperimentalPlanActivity : ComponentActivity() {
         root.addView(status)
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3)))
         root.addView(actions)
+        root.addView(autoRefreshEnabled)
+        root.addView(autoRefreshHelp)
+        root.addView(resetNotificationsEnabled)
+        root.addView(resetNotificationsHelp)
         root.addView(proxyEnabled)
         root.addView(proxyHelp)
         root.addView(proxyFields)
@@ -258,6 +338,10 @@ class ExperimentalPlanActivity : ComponentActivity() {
     }
 
     private fun beginMainFrameLoad() {
+        pageReady = false
+        autoRefreshPaused = false
+        cancelAutoRefresh()
+        invalidateUsageRead()
         mainFrameLoading = true
         mainFrameFailed = false
         status.text = getString(R.string.experimental_web_loading)
@@ -290,6 +374,8 @@ class ExperimentalPlanActivity : ComponentActivity() {
 
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             if (request?.isForMainFrame == true) {
+                pageReady = false
+                cancelAutoRefresh()
                 mainFrameFailed = true
                 mainFrameLoading = false
                 mainHandler.removeCallbacks(loadTimeout)
@@ -304,6 +390,8 @@ class ExperimentalPlanActivity : ComponentActivity() {
             errorResponse: WebResourceResponse?
         ) {
             if (request?.isForMainFrame == true) {
+                pageReady = false
+                cancelAutoRefresh()
                 mainFrameFailed = true
                 mainFrameLoading = false
                 mainHandler.removeCallbacks(loadTimeout)
@@ -314,6 +402,8 @@ class ExperimentalPlanActivity : ComponentActivity() {
 
         override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
             handler?.cancel()
+            pageReady = false
+            cancelAutoRefresh()
             mainFrameFailed = true
             mainFrameLoading = false
             mainHandler.removeCallbacks(loadTimeout)
@@ -325,6 +415,9 @@ class ExperimentalPlanActivity : ComponentActivity() {
             mainFrameFailed = true
             mainFrameLoading = false
             webViewAvailable = false
+            pageReady = false
+            cancelAutoRefresh()
+            invalidateUsageRead()
             mainHandler.removeCallbacks(loadTimeout)
             progress.visibility = View.GONE
             status.text = getString(R.string.experimental_web_renderer_gone)
@@ -339,14 +432,20 @@ class ExperimentalPlanActivity : ComponentActivity() {
             mainFrameLoading = false
             mainHandler.removeCallbacks(loadTimeout)
             if (!mainFrameFailed) {
+                pageReady = true
                 status.text = getString(R.string.experimental_browser_sign_in)
+                scheduleAutoRefresh(immediateIfStale = true)
             }
         }
     }
 
-    private fun readUsage() {
+    private fun readUsage(manual: Boolean = true) {
         if (!webViewAvailable) {
             status.text = getString(R.string.experimental_web_renderer_gone)
+            return
+        }
+        if (usageReadInFlight) {
+            if (manual) status.text = getString(R.string.experimental_read_in_progress)
             return
         }
         val currentUri = webView.url.orEmpty().toUri()
@@ -354,22 +453,38 @@ class ExperimentalPlanActivity : ComponentActivity() {
             status.text = getString(R.string.experimental_return_to_chatgpt)
             return
         }
+        if (manual) autoRefreshPaused = false
+        usageReadInFlight = true
+        val readGeneration = usageReadGeneration
+        preferences.markReadAttempt()
         status.text = getString(R.string.experimental_reading)
-        webView.evaluateJavascript(USAGE_SCRIPT) { encodedResult ->
+        webView.evaluateJavascript(USAGE_SCRIPT, usageCallback@{ encodedResult ->
+            if (readGeneration != usageReadGeneration || !webViewAvailable) {
+                return@usageCallback
+            }
             runCatching {
                 val decoded = JSONTokener(encodedResult).nextValue() as String
                 val envelope = JSONObject(decoded)
                 val httpStatus = envelope.optInt("status")
-                if (httpStatus !in 200..299) error("HTTP $httpStatus")
+                if (httpStatus !in 200..299) throw UsageHttpException(httpStatus)
                 parseUsage(JSONObject(envelope.getString("body")))
             }.onSuccess { usage ->
-                preferences.saveUsage(usage)
+                val resetEvents = preferences.saveUsage(usage)
+                if (preferences.resetNotificationsEnabled()) {
+                    ExperimentalPlanResetNotifier(this).notify(resetEvents)
+                }
                 status.text = getString(R.string.experimental_read_success)
+                autoRefreshPaused = false
                 setResult(RESULT_OK)
             }.onFailure { error ->
+                val category = error.readErrorCategory()
+                preferences.markReadFailure(category)
+                autoRefreshPaused = ExperimentalPlanAutoRefreshPolicy.shouldPauseAfter(category)
                 status.text = getString(R.string.experimental_read_failed, error.message ?: "unknown")
             }
-        }
+            usageReadInFlight = false
+            if (canAutoRefresh()) scheduleAutoRefresh(immediateIfStale = false)
+        })
     }
 
     private fun parseUsage(json: JSONObject): ExperimentalPlanUsage {
@@ -380,8 +495,10 @@ class ExperimentalPlanActivity : ComponentActivity() {
             planType = json.optString("plan_type"),
             primaryRemaining = primary?.remainingPercent(),
             primaryResetAtSeconds = primary?.resetAt(),
+            primaryWindowSeconds = primary?.windowSeconds(),
             secondaryRemaining = secondary?.remainingPercent(),
             secondaryResetAtSeconds = secondary?.resetAt(),
+            secondaryWindowSeconds = secondary?.windowSeconds(),
             updatedAtMillis = System.currentTimeMillis()
         )
     }
@@ -397,7 +514,64 @@ class ExperimentalPlanActivity : ComponentActivity() {
         else -> null
     }
 
+    private fun JSONObject.windowSeconds(): Long? =
+        optLong("limit_window_seconds").takeIf { it > 0 }
+
+    private fun Throwable.readErrorCategory(): ExperimentalPlanReadError = when (this) {
+        is UsageHttpException -> ExperimentalPlanReadErrorClassifier.fromHttpStatus(statusCode)
+        else -> ExperimentalPlanReadError.PARSE
+    }
+
+    private fun canAutoRefresh(): Boolean =
+        ::autoRefreshEnabled.isInitialized &&
+            autoRefreshEnabled.isChecked &&
+            activityVisible &&
+            pageReady &&
+            webViewAvailable &&
+            !usageReadInFlight &&
+            !autoRefreshPaused &&
+            !isFinishing &&
+            !isDestroyed
+
+    private fun scheduleAutoRefresh(immediateIfStale: Boolean) {
+        cancelAutoRefresh()
+        if (!canAutoRefresh()) return
+        val lastUpdated = preferences.usage()?.updatedAtMillis ?: 0L
+        val delay = ExperimentalPlanAutoRefreshPolicy.nextDelayMillis(
+            lastUpdatedAtMillis = lastUpdated,
+            nowMillis = System.currentTimeMillis(),
+            immediateIfStale = immediateIfStale
+        )
+        mainHandler.postDelayed(autoRefresh, delay)
+    }
+
+    private fun scheduleImmediateAutoRefresh() {
+        cancelAutoRefresh()
+        if (canAutoRefresh()) {
+            mainHandler.postDelayed(autoRefresh, ExperimentalPlanAutoRefreshPolicy.INITIAL_DELAY_MILLIS)
+        }
+    }
+
+    private fun cancelAutoRefresh() {
+        mainHandler.removeCallbacks(autoRefresh)
+    }
+
+    private fun setAutoRefreshChecked(checked: Boolean) {
+        suppressAutoRefreshListener = true
+        autoRefreshEnabled.isChecked = checked
+        suppressAutoRefreshListener = false
+    }
+
+    private fun invalidateUsageRead() {
+        usageReadGeneration++
+        usageReadInFlight = false
+    }
+
     private fun disconnect() {
+        cancelAutoRefresh()
+        invalidateUsageRead()
+        autoRefreshPaused = true
+        setAutoRefreshChecked(false)
         preferences.clearAll()
         setResult(RESULT_OK)
         WebStorage.getInstance().deleteAllData()
@@ -416,8 +590,22 @@ class ExperimentalPlanActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        activityVisible = true
+        scheduleAutoRefresh(immediateIfStale = true)
+    }
+
+    override fun onStop() {
+        activityVisible = false
+        cancelAutoRefresh()
+        super.onStop()
+    }
+
     override fun onDestroy() {
         mainHandler.removeCallbacks(loadTimeout)
+        cancelAutoRefresh()
+        invalidateUsageRead()
         if (webViewAvailable) {
             webView.stopLoading()
             (webView.parent as? ViewGroup)?.removeView(webView)
@@ -435,15 +623,54 @@ class ExperimentalPlanActivity : ComponentActivity() {
         private const val USAGE_SCRIPT = """
             (function() {
               try {
+                var sessionRequest = new XMLHttpRequest();
+                sessionRequest.open('GET', '/api/auth/session', false);
+                sessionRequest.withCredentials = true;
+                sessionRequest.setRequestHeader('Accept', 'application/json');
+                sessionRequest.send(null);
+
+                if (sessionRequest.status < 200 || sessionRequest.status >= 300) {
+                  return JSON.stringify({status: sessionRequest.status, body: ''});
+                }
+                var session = JSON.parse(sessionRequest.responseText || '{}');
+                var accessToken = typeof session.accessToken === 'string' ? session.accessToken : '';
+                if (!accessToken) return JSON.stringify({status: 401, body: ''});
+
                 var request = new XMLHttpRequest();
                 request.open('GET', '/backend-api/wham/usage', false);
                 request.withCredentials = true;
+                request.setRequestHeader('Accept', 'application/json');
+                request.setRequestHeader('Authorization', 'Bearer ' + accessToken);
                 request.send(null);
-                return JSON.stringify({status: request.status, body: request.responseText});
+
+                var body = '';
+                if (request.status >= 200 && request.status < 300) {
+                  var rawUsage = JSON.parse(request.responseText || '{}');
+                  var rawRateLimit = rawUsage.rate_limit || rawUsage;
+                  var sanitizeWindow = function(windowValue) {
+                    if (!windowValue || typeof windowValue !== 'object') return null;
+                    return {
+                      used_percent: windowValue.used_percent,
+                      reset_at: windowValue.reset_at,
+                      reset_after_seconds: windowValue.reset_after_seconds,
+                      limit_window_seconds: windowValue.limit_window_seconds
+                    };
+                  };
+                  body = JSON.stringify({
+                    plan_type: typeof rawUsage.plan_type === 'string' ? rawUsage.plan_type : '',
+                    rate_limit: {
+                      primary_window: sanitizeWindow(rawRateLimit.primary_window),
+                      secondary_window: sanitizeWindow(rawRateLimit.secondary_window)
+                    }
+                  });
+                }
+                return JSON.stringify({status: request.status, body: body});
               } catch (error) {
-                return JSON.stringify({status: 0, body: '', error: String(error)});
+                return JSON.stringify({status: 0, body: ''});
               }
             })();
         """
     }
+
+    private class UsageHttpException(val statusCode: Int) : IllegalStateException("HTTP $statusCode")
 }
