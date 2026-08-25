@@ -11,6 +11,7 @@ import java.util.Locale
 enum class ProviderDisplayMode(val provider: Provider?) {
     AUTO_CONFIGURED(null),
     CUSTOM_GROUP(null),
+    PIN_EXPERIMENTAL_PLAN(null),
     PIN_DEEPSEEK(Provider.DEEPSEEK),
     PIN_OPENAI(Provider.OPENAI),
     PIN_OPENROUTER(Provider.OPENROUTER),
@@ -20,6 +21,19 @@ enum class ProviderDisplayMode(val provider: Provider?) {
     PIN_ANTHROPIC(Provider.ANTHROPIC),
     PIN_GEMINI(Provider.GEMINI),
     PIN_XAI(Provider.XAI)
+}
+
+object OverlayPlanDisplayPolicy {
+    fun includesPlan(
+        mode: ProviderDisplayMode,
+        includeInAuto: Boolean,
+        includeInCustomGroup: Boolean
+    ): Boolean = when (mode) {
+        ProviderDisplayMode.AUTO_CONFIGURED -> includeInAuto
+        ProviderDisplayMode.CUSTOM_GROUP -> includeInCustomGroup
+        ProviderDisplayMode.PIN_EXPERIMENTAL_PLAN -> true
+        else -> false
+    }
 }
 
 enum class StatusBarPositionPreset(
@@ -142,6 +156,27 @@ class OverlayDisplayPreferences(context: Context) {
         notifyChanged()
     }
 
+    fun includePlanInAuto(): Boolean = prefs.getBoolean(KEY_INCLUDE_PLAN_IN_AUTO, true)
+
+    fun setIncludePlanInAuto(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_INCLUDE_PLAN_IN_AUTO, enabled).apply()
+        notifyChanged()
+    }
+
+    fun includePlanInCustomGroup(): Boolean =
+        prefs.getBoolean(KEY_INCLUDE_PLAN_IN_CUSTOM_GROUP, true)
+
+    fun setIncludePlanInCustomGroup(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_INCLUDE_PLAN_IN_CUSTOM_GROUP, enabled).apply()
+        notifyChanged()
+    }
+
+    fun shouldIncludePlan(): Boolean = OverlayPlanDisplayPolicy.includesPlan(
+        mode = mode(),
+        includeInAuto = includePlanInAuto(),
+        includeInCustomGroup = includePlanInCustomGroup()
+    )
+
     fun position(): StatusBarPositionPreset = enumPreference(
         KEY_POSITION_PRESET,
         StatusBarPositionPreset.LEFT_SAFE
@@ -231,8 +266,9 @@ class OverlayDisplayPreferences(context: Context) {
             ProviderDisplayMode.AUTO_CONFIGURED -> snapshots
             ProviderDisplayMode.CUSTOM_GROUP -> {
                 val selected = providerGroup()
-                snapshots.filter { it.provider in selected }.ifEmpty { snapshots }
+                snapshots.filter { it.provider in selected }
             }
+            ProviderDisplayMode.PIN_EXPERIMENTAL_PLAN -> emptyList()
             else -> snapshots.filter { it.provider == displayMode.provider }.ifEmpty { snapshots }
         }
     }
@@ -257,6 +293,8 @@ class OverlayDisplayPreferences(context: Context) {
         private const val PREFS_NAME = "overlay_settings"
         private const val KEY_PROVIDER_DISPLAY_MODE = "provider_display_mode"
         private const val KEY_PROVIDER_GROUP = "provider_group"
+        private const val KEY_INCLUDE_PLAN_IN_AUTO = "include_plan_in_auto"
+        private const val KEY_INCLUDE_PLAN_IN_CUSTOM_GROUP = "include_plan_in_custom_group"
         private const val KEY_POSITION_PRESET = "status_bar_position_preset"
         private const val KEY_VISUAL_STYLE = "status_bar_visual_style"
         private const val KEY_CONTENT_MODE = "balance_content_mode"
