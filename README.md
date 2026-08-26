@@ -1,3 +1,5 @@
+[English](README_EN.md)
+
 # 状态栏余额（Balance Island）MVP
 
 一个原生 Android 应用，用状态栏顶部的透明文字条显示多家 AI API 的余额、预算或 Key 状态。面向 Android 8.0 及以上的大多数手机和平板，不绑定特定品牌或型号。
@@ -124,6 +126,7 @@ APK 默认输出：`app/build/outputs/apk/debug/app-debug.apk`。
 - 只有匹配当前 `versionName` 的正式 `v*` 标签构建才会读取 `ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`，额外生成正式签名 Release APK；PR、`main` 推送和手动构建不接触这些 Secrets。
 - APK 在对应 Actions 运行页的 `Artifacts` 区域下载：Debug 默认保留 14 天，签名 Release 默认保留 30 天。
 - 匹配当前 `versionName` 的正式标签构建成功后会创建或更新对应 Release（例如 `v0.9.0`），优先使用 `NOTE.md` 作为当前版本说明；缺失时从 `CHANGELOG.md` 自动截取对应版本，并上传通过证书检查的 `BalanceIsland-v<version>.apk`。以 `-debug` 结尾的匹配标签只发布预发行 Debug APK。
+- 从 `v0.9.2` 起，正式 Release 还会上传 `BalanceIsland-v<version>-source-minimal.zip`；该包只包含当前标签的 `app/src/main`、Gradle 构建文件和必要许可声明，不包含测试、任务资料、缓存或构建产物。
 - Debug APK 只适合测试；对外发布和覆盖升级应始终使用同一套 Release Keystore 签名的 APK。
 - 正式 Release 的签名冲突问题已解决：工作流会检查证书并拒绝 `CN=Android Debug`。早期 Debug 签名安装只需卸载迁移一次，之后正式版本可连续覆盖升级。
 

@@ -237,6 +237,8 @@
     <string name="experimental_error_parse">インターフェース形式が変わったか、応答を解析できません</string>
     <string name="provider_group_plan_usage">ChatGPT/Codex プラン使用枠</string>
     <string name="plan_display_help">自動切り替えには設定済み API アカウントと取得済みプラン使用枠がすべて含まれます。カスタムでは自由に組み合わせ、固定ではプラン使用枠だけを表示します。</string>
+    <string name="plan_preview_active">上部プレビューと実際のアイランドに反映済みです。5 秒ごとに自動切替し、テキストバーをタップするとすぐに切り替わります。</string>
+    <string name="plan_preview_not_selected">まだプレビューに含まれていません。先にプラン使用枠を取得し、「アイランド表示」で自動切替、カスタムグループ、またはプラン固定を選択してください。</string>
     <string name="experimental_overlay_label_five_hour">5時間</string>
     <string name="experimental_overlay_label_weekly">週</string>
     <string name="experimental_overlay_label_generic">枠</string>

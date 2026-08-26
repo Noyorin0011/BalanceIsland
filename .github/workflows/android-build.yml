@@ -156,8 +156,43 @@ jobs:
 
           release_tag="$GITHUB_REF_NAME"
           release_asset="$RUNNER_TEMP/BalanceIsland-v${version_name}.apk"
+          source_root="$RUNNER_TEMP/BalanceIsland-v${version_name}-source"
+          source_asset="$RUNNER_TEMP/BalanceIsland-v${version_name}-source-minimal.zip"
           release_notes="$RUNNER_TEMP/BalanceIsland-v${version_name}-notes.md"
           cp app/build/outputs/apk/release/app-release.apk "$release_asset"
+
+          # Since v0.9.2, publish a version-scoped, minimal buildable source tree.
+          # Copy only files required by the Android build plus mandatory notices;
+          # never archive the checkout wholesale, so local/task/generated files
+          # cannot leak into a release asset.
+          rm -rf "$source_root" "$source_asset"
+          mkdir -p "$source_root/app/src"
+          cp -R app/src/main "$source_root/app/src/main"
+          cp app/build.gradle.kts app/proguard-rules.pro "$source_root/app/"
+          cp build.gradle.kts settings.gradle.kts gradle.properties \
+            gradlew gradlew.bat LICENSE NOTICE_BRAND_ICONS.md "$source_root/"
+          chmod +x "$source_root/gradlew"
+
+          # Archive before invoking Gradle so no cache or build output can enter it.
+          (
+            cd "$RUNNER_TEMP"
+            zip -q -r "$source_asset" "$(basename "$source_root")"
+          )
+          test -s "$source_asset"
+
+          archive_entries="$(unzip -Z1 "$source_asset")"
+          forbidden_source_path='(^|/)(\.git|\.github|\.gradle|\.gradle-dist|build|tools)(/|$)|(^|/)(CODEX_[^/]*|local\.properties|[^/]*\.(apk|aab|jks|keystore))$'
+          if grep -Eq "$forbidden_source_path" <<<"$archive_entries"; then
+            echo "Minimal source archive contains a forbidden path:" >&2
+            grep -E "$forbidden_source_path" <<<"$archive_entries" >&2
+            exit 1
+          fi
+
+          # Prove the exact copied source tree can produce a Debug APK. The ZIP
+          # is already sealed, so files produced by this check cannot enter it.
+          gradle -p "$source_root" :app:assembleDebug \
+            --project-cache-dir "$RUNNER_TEMP/minimal-source-gradle-cache" \
+            --no-daemon --stacktrace >/dev/null
 
           if [[ -f "NOTE.md" ]]; then
             cp NOTE.md "$release_notes"
@@ -197,7 +232,7 @@ jobs:
             [[ -z "$old_asset" ]] || gh release delete-asset "$release_tag" "$old_asset" --yes
           done < <(gh release view "$release_tag" --json assets --jq '.assets[].name | select(endswith(".apk"))')
 
-          gh release upload "$release_tag" "$release_asset" --clobber
+          gh release upload "$release_tag" "$release_asset" "$source_asset" --clobber
 
       - name: Remove release keystore
         if: ${{ always() && github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !endsWith(github.ref_name, '-debug') }}

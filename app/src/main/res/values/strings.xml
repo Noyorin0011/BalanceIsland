@@ -237,6 +237,8 @@
     <string name="experimental_error_parse">接口格式已变化或响应无法解析</string>
     <string name="provider_group_plan_usage">ChatGPT/Codex 套餐余量</string>
     <string name="plan_display_help">自动轮播包含全部已配置 API 账户和已读取的套餐余量；自定义分组可任意组合，固定套餐只显示套餐余量。</string>
+    <string name="plan_preview_active">已接入顶部预览和实际浮岛；每 5 秒自动轮换，点按文字条可立即切换。</string>
+    <string name="plan_preview_not_selected">尚未接入预览：请先读取套餐余量，并在“浮岛显示”中选择自动轮播、自定义分组或固定套餐。</string>
     <string name="experimental_overlay_label_five_hour">5 小时</string>
     <string name="experimental_overlay_label_weekly">周</string>
     <string name="experimental_overlay_label_generic">额度</string>
