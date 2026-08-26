@@ -66,6 +66,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -279,6 +280,31 @@ private fun BalanceIslandScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         experimentalRefreshKey++
+    }
+    val openExperimentalReader = {
+        if (experimentalPreferences.consentAccepted()) {
+            experimentalLauncher.launch(Intent(context, ExperimentalPlanActivity::class.java))
+        } else {
+            riskAccepted = false
+            showExperimentalConsent = true
+        }
+    }
+
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == ExperimentalPlanPreferences.ACTION_PLAN_USAGE_CHANGED) {
+                    experimentalRefreshKey++
+                }
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(ExperimentalPlanPreferences.ACTION_PLAN_USAGE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
     }
 
     var selectedProviderName by rememberSaveable { mutableStateOf(Provider.DEEPSEEK.name) }
@@ -507,6 +533,57 @@ private fun BalanceIslandScreen(
             )
 
             if (selectedPage == SettingsPage.OVERVIEW) {
+            if (experimentalPreferences.consentAccepted() || experimentalUsage != null) {
+                SectionPanel(stringResource(R.string.provider_group_plan_usage)) {
+                    Text(
+                        stringResource(R.string.experimental_banner),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (experimentalUsage == null) {
+                        Text(
+                            stringResource(R.string.experimental_no_data),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            ExperimentalPlanOverlayFormatter.compact(context, experimentalUsage)
+                                .orEmpty(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            stringResource(
+                                R.string.experimental_updated,
+                                SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+                                    .format(Date(experimentalUsage.updatedAtMillis))
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Text(
+                        stringResource(
+                            if (experimentalUsage != null && preferences.shouldIncludePlan()) {
+                                R.string.plan_preview_active
+                            } else {
+                                R.string.plan_preview_not_selected
+                            }
+                        ),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedButton(
+                        onClick = openExperimentalReader,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(stringResource(R.string.experimental_open)) }
+                    OutlinedButton(
+                        onClick = { selectedPageName = SettingsPage.DISPLAY.name },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(stringResource(R.string.menu_display)) }
+                }
+            }
             SectionPanel(stringResource(R.string.section_account_status)) {
                 if (state.snapshots.isEmpty()) {
                     Text(stringResource(R.string.no_accounts), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1114,14 +1191,7 @@ private fun BalanceIslandScreen(
                         )
                     }
                     Button(
-                        onClick = {
-                            if (experimentalPreferences.consentAccepted()) {
-                                experimentalLauncher.launch(Intent(context, ExperimentalPlanActivity::class.java))
-                            } else {
-                                riskAccepted = false
-                                showExperimentalConsent = true
-                            }
-                        },
+                        onClick = openExperimentalReader,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(stringResource(R.string.experimental_open)) }
                     Text(
@@ -1368,11 +1438,29 @@ private fun StatusBarPreview(
     experimentalUsage: ExperimentalPlanUsage?
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val snapshot = snapshots.firstOrNull()
+    var previewIndex by remember { mutableStateOf(0) }
+    var previewTick by remember { mutableStateOf(0) }
+    val previewNowMillis = remember(previewTick) { System.currentTimeMillis() }
     val experimentalText = experimentalUsage?.let {
-        ExperimentalPlanOverlayFormatter.compact(context, it)
+        ExperimentalPlanOverlayFormatter.compact(
+            context = context,
+            usage = it,
+            nowMillis = previewNowMillis
+        )
     }
-    val showingExperimental = snapshot == null && experimentalText != null
+    val entryCount = snapshots.size + if (experimentalText == null) 0 else 1
+
+    LaunchedEffect(entryCount) {
+        previewIndex = if (entryCount > 0) previewIndex % entryCount else 0
+        while (entryCount > 0) {
+            delay(5_000)
+            previewTick++
+            if (entryCount > 1) previewIndex = (previewIndex + 1) % entryCount
+        }
+    }
+
+    val showingExperimental = experimentalText != null && previewIndex == snapshots.size
+    val snapshot = if (showingExperimental) null else snapshots.getOrNull(previewIndex)
     val sameProviderCount = snapshot?.let { selected ->
         snapshots.count { it.provider == selected.provider }
     } ?: 0
@@ -1424,6 +1512,9 @@ private fun StatusBarPreview(
     ) {
         Row(
             modifier = Modifier
+                .clickable(enabled = entryCount > 1) {
+                    previewIndex = (previewIndex + 1) % entryCount
+                }
                 .background(
                     previewBackground,
                     RoundedCornerShape(if (hasBackground) 4.dp else 0.dp)

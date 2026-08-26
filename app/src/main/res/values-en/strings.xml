@@ -237,6 +237,8 @@
     <string name="experimental_error_parse">The interface format changed or the response could not be parsed</string>
     <string name="provider_group_plan_usage">ChatGPT/Codex plan usage</string>
     <string name="plan_display_help">Auto rotation includes all configured API accounts and cached plan usage. A custom group can combine either, while pinning plan usage shows it alone.</string>
+    <string name="plan_preview_active">Included in the top preview and the live island. It rotates every 5 seconds; tap the text strip to switch immediately.</string>
+    <string name="plan_preview_not_selected">Not included in the preview yet. Read plan usage first, then choose automatic rotation, a custom group, or pin plan usage under Island display.</string>
     <string name="experimental_overlay_label_five_hour">5h</string>
     <string name="experimental_overlay_label_weekly">Week</string>
     <string name="experimental_overlay_label_generic">Plan</string>

@@ -237,6 +237,8 @@
     <string name="experimental_error_parse">介面格式已變更或無法解析回應</string>
     <string name="provider_group_plan_usage">ChatGPT/Codex 方案餘量</string>
     <string name="plan_display_help">自動輪播包含全部已設定 API 帳戶和已讀取的方案餘量；自訂群組可任意組合，固定方案只顯示方案餘量。</string>
+    <string name="plan_preview_active">已接入頂部預覽與實際浮島；每 5 秒自動輪換，點按文字列可立即切換。</string>
+    <string name="plan_preview_not_selected">尚未接入預覽：請先讀取方案餘量，並在「浮島顯示」中選擇自動輪播、自訂群組或固定方案。</string>
     <string name="experimental_overlay_label_five_hour">5 小時</string>
     <string name="experimental_overlay_label_weekly">週</string>
     <string name="experimental_overlay_label_generic">額度</string>
