@@ -599,6 +599,7 @@ class ExperimentalPlanActivity : ComponentActivity() {
     override fun onStop() {
         activityVisible = false
         cancelAutoRefresh()
+        CookieManager.getInstance().flush()
         super.onStop()
     }
 
