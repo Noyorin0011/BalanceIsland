@@ -13,14 +13,14 @@ class ServiceRuntimePreferences(context: Context) {
     fun autoRestartEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_RESTART, false)
 
     fun setAutoRestartEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTO_RESTART, enabled).apply()
+        prefs.edit().putBoolean(KEY_AUTO_RESTART, enabled).commit()
         notifyTile()
     }
 
     fun desiredRunning(): Boolean = prefs.getBoolean(KEY_DESIRED_RUNNING, false)
 
     fun setDesiredRunning(running: Boolean) {
-        prefs.edit().putBoolean(KEY_DESIRED_RUNNING, running).apply()
+        prefs.edit().putBoolean(KEY_DESIRED_RUNNING, running).commit()
         notifyTile()
     }
 
@@ -36,7 +36,7 @@ class ServiceRuntimePreferences(context: Context) {
         prefs.edit()
             .putBoolean(KEY_DESIRED_RUNNING, false)
             .putBoolean(KEY_SERVICE_RUNNING, false)
-            .apply()
+            .commit()
         notifyTile()
     }
 

@@ -179,7 +179,6 @@ class IslandOverlayService : Service() {
             }
         }
         applyPosition()
-        windowManager.addView(root, params)
 
         val filter = IntentFilter().apply {
             addAction(BalanceRepository.ACTION_BALANCE_UPDATED)
@@ -201,19 +200,25 @@ class IslandOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_STOP -> {
-                explicitStop = true
-                runtimePreferences.clearRunningState()
-                cancelScheduledRestart(this)
-                stopSelf()
-            }
-            ACTION_REFRESH -> refreshNow()
-            ACTION_SHOW_OVERLAY -> {
-                lastChangeAt = SystemClock.elapsedRealtime()
-                showOverlay()
-            }
+        val action = intent?.action
+        val decision = OverlayServiceStartPolicy.decide(
+            action = action,
+            desiredRunning = runtimePreferences.desiredRunning()
+        )
+        if (action == ACTION_STOP) {
+            explicitStop = true
+            runtimePreferences.clearRunningState()
+            cancelScheduledRestart(this)
         }
+        if (decision.stopService) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        if (decision.ensureOverlayAttached) {
+            ensureOverlayAttached(reveal = decision.revealOverlay)
+        }
+        if (decision.refreshNow) refreshNow()
         return START_STICKY
     }
 
@@ -222,7 +227,7 @@ class IslandOverlayService : Service() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         runCatching { unregisterReceiver(updateReceiver) }
-        if (::root.isInitialized && root.isAttachedToWindow) windowManager.removeView(root)
+        if (::root.isInitialized && root.parent != null) windowManager.removeView(root)
         scope.cancel()
         if (::runtimePreferences.isInitialized) {
             runtimePreferences.setServiceRunning(false)
@@ -249,6 +254,17 @@ class IslandOverlayService : Service() {
         if (::root.isInitialized) render()
     }
 
+    private fun ensureOverlayAttached(reveal: Boolean) {
+        if (!::root.isInitialized || !::params.isInitialized) return
+        OverlayWindowRegistration.ensureAttached(root.parent != null) {
+            windowManager.addView(root, params)
+        }
+        if (reveal) {
+            lastChangeAt = SystemClock.elapsedRealtime()
+            showOverlay()
+        }
+    }
+
     private fun applyPosition() {
         if (!::params.isInitialized) return
         val preset = displayPreferences.position()
@@ -262,7 +278,7 @@ class IslandOverlayService : Service() {
         params.y = dp(displayPreferences.verticalOffsetDp())
         params.width = WindowManager.LayoutParams.WRAP_CONTENT
         params.height = overlayHeightPx()
-        if (::root.isInitialized && root.isAttachedToWindow) {
+        if (::root.isInitialized && root.parent != null) {
             windowManager.updateViewLayout(root, params)
         }
     }
@@ -699,11 +715,11 @@ class IslandOverlayService : Service() {
         private const val MIN_EDGE_INSET_DP = 4
         const val PREFS_NAME = "overlay_settings"
         const val KEY_Y_OFFSET = "y_offset_dp"
-        const val ACTION_STOP = "com.noyorin.balanceisland.STOP_OVERLAY"
-        const val ACTION_REFRESH = "com.noyorin.balanceisland.REFRESH_OVERLAY"
-        const val ACTION_SHOW_OVERLAY = "com.noyorin.balanceisland.SHOW_OVERLAY"
+        const val ACTION_STOP = OverlayServiceStartPolicy.ACTION_STOP
+        const val ACTION_REFRESH = OverlayServiceStartPolicy.ACTION_REFRESH
+        const val ACTION_SHOW_OVERLAY = OverlayServiceStartPolicy.ACTION_SHOW_OVERLAY
         const val EXTRA_RESTORE_OVERLAY = "restore_overlay"
-        private const val ACTION_RESTART = "com.noyorin.balanceisland.RESTART_OVERLAY"
+        private const val ACTION_RESTART = OverlayServiceStartPolicy.ACTION_RESTART
         private const val RESTART_REQUEST_CODE = 2002
 
         fun start(context: Context) {
